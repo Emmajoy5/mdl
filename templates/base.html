@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block title %}Microbial Digital Library{% endblock %}</title>
+<link rel="manifest" href="{{ url_for('manifest') }}">
+<link rel="icon" href="{{ url_for('static', filename='icon-32.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
+<meta name="theme-color" content="#ffffff">
+<style>
+  :root {
+    --bg:#ffffff; --card:#f6f8fb; --line:#dfe5ee; --text:#172033;
+    --muted:#5b6679; --accent:#0e7490; --accent-dim:#0e7490;
+    --good:#15803d; --warn:#b45309; --bad:#dc2626;
+  }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body {
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;
+  }
+  a { color:var(--accent); text-decoration:none; }
+  a:hover { text-decoration:underline; }
+
+  nav { display:flex; align-items:center; gap:18px; padding:12px 24px; border-bottom:1px solid var(--line);
+        position:sticky; top:0; background:rgba(255,255,255,.92); backdrop-filter:blur(6px); z-index:10; flex-wrap:wrap; }
+  nav .brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:16px; color:var(--text); }
+  nav .brand img { height:30px; width:auto; display:block; }
+  nav .links { display:flex; gap:16px; margin-left:auto; flex-wrap:wrap; font-size:14px; }
+  nav .links a { color:var(--muted); }
+  nav .links a:hover { color:var(--text); }
+
+  main { max-width:1200px; margin:0 auto; padding:24px; }
+
+  .flash { background:#ecfdf3; border:1px solid var(--good); color:#14532d; border-radius:10px;
+           padding:10px 16px; margin:0 0 18px; font-size:14px; }
+
+  h1 { font-size:26px; margin:0 0 6px; }
+  h2 { font-size:19px; margin:28px 0 10px; }
+  .muted { color:var(--muted); }
+  .small { font-size:12.5px; }
+
+  .btn { display:inline-block; background:var(--accent-dim); color:#fff; border:none; border-radius:8px;
+         padding:9px 16px; font-size:14px; cursor:pointer; text-decoration:none; }
+  .btn:hover { background:#155e75; text-decoration:none; }
+  .btn.secondary { background:transparent; border:1px solid var(--line); color:var(--text); }
+  .btn.secondary:hover { border-color:var(--accent); }
+  .btn.danger { background:transparent; border:1px solid var(--bad); color:var(--bad); }
+  .btn.danger:hover { background:rgba(220,38,38,.08); }
+  .btn.small { padding:5px 11px; font-size:12.5px; }
+
+  input, select, textarea { background:#fff; color-scheme:light; border:1px solid #cbd3e0; color:var(--text);
+                  border-radius:8px; padding:9px 12px; font-size:14px; font-family:inherit; }
+  textarea { width:100%; resize:vertical; }
+  label { display:block; font-size:12.5px; color:var(--muted); margin:0 0 4px; }
+  .field { margin-bottom:14px; }
+  .field-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; }
+
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:18px; }
+
+  table { width:100%; border-collapse:collapse; font-size:13.5px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em; }
+
+  .badge { font-size:11px; font-weight:600; border-radius:6px; padding:2px 8px; display:inline-block; }
+  .b-good { background:rgba(21,128,61,.12); color:var(--good); }
+  .b-warn { background:rgba(245,158,11,.18); color:var(--warn); }
+  .b-bad  { background:rgba(220,38,38,.12); color:var(--bad); }
+  .b-muted{ background:#e9edf4; color:#5b6679; }
+
+  .tag { display:inline-block; background:#e9edf4; color:#3f4a5e; border-radius:6px; padding:2px 9px; font-size:12px; margin:2px 4px 0 0; }
+
+  footer { max-width:1200px; margin:40px auto 30px; padding:0 24px; color:var(--muted); font-size:12px; }
+
+  /* Hero + tile grid (landing page) */
+  .hero { display:flex; align-items:center; gap:36px; padding:36px 0 30px; flex-wrap:wrap; }
+  .hero img.hero-logo { width:140px; height:auto; flex-shrink:0; }
+  .hero h1 { font-size:clamp(26px,4vw,38px); margin:0 0 10px; }
+  .hero p { color:var(--muted); font-size:15.5px; max-width:56ch; margin:0; }
+  .stat-row { display:flex; gap:28px; margin-top:22px; flex-wrap:wrap; }
+  .stat b { display:block; font-size:26px; color:var(--accent); }
+  .stat span { color:var(--muted); font-size:12.5px; }
+
+  .tile-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin:22px 0; }
+  .tile { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; display:block; color:var(--text); }
+  .tile:hover { border-color:var(--accent); text-decoration:none; }
+  .tile .tile-icon { font-size:26px; margin-bottom:10px; display:block; }
+  .tile h3 { margin:0 0 6px; font-size:15.5px; }
+  .tile p { margin:0; color:var(--muted); font-size:13px; }
+
+  @media (max-width:640px) {
+    nav .links { width:100%; justify-content:flex-start; margin-left:0; }
+  }
+
+  /* Calendar date-picker (static/calendar-picker.js) -- every date field in
+     the app auto-enhances via input.date-input, instead of the browser's
+     own date popup (which can ignore the app theme on some platforms). */
+  .cal-field { position:relative; display:block; }
+  .cal-field input.date-input { width:100%; padding-right:32px; }
+  .cal-icon { position:absolute; right:9px; top:50%; transform:translateY(-50%);
+              pointer-events:none; font-size:13px; opacity:.75; }
+  .cal-popup { background:var(--card); border:1px solid var(--line); border-radius:10px;
+               padding:10px; box-shadow:0 10px 28px rgba(23,32,51,.18); z-index:1000;
+               width:236px; font-size:13px; }
+  .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .cal-label { font-weight:600; font-size:13px; }
+  .cal-nav { background:transparent; border:1px solid var(--line); color:var(--text);
+             border-radius:6px; width:26px; height:26px; cursor:pointer; font-size:15px;
+             line-height:1; padding:0; }
+  .cal-nav:hover { border-color:var(--accent); color:var(--accent); }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+  .cal-dow { text-align:center; color:var(--muted); font-size:10.5px; padding:4px 0; }
+  .cal-day { background:transparent; border:none; color:var(--text); border-radius:6px;
+             padding:6px 0; cursor:pointer; font-size:12.5px; }
+  .cal-day:hover { background:rgba(14,116,144,.12); }
+  .cal-today { box-shadow:inset 0 0 0 1px var(--accent); }
+  .cal-selected { background:var(--accent-dim); color:#fff; }
+  .cal-footer { display:flex; justify-content:space-between; margin-top:8px; padding-top:8px;
+                border-top:1px solid var(--line); }
+  .cal-link { background:transparent; border:none; color:var(--accent); cursor:pointer;
+              font-size:12px; padding:2px 4px; }
+  .cal-link:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+{% if demo_mode %}
+<div style="background:#7a4b00;color:#fff;padding:8px 16px;font-size:14px;text-align:center;">
+  Public demo: anyone can see and change what is here, and everything is wiped every {{ demo_reset_hours|round|int }} hours.
+  Do not enter real data. <a href="{{ demo_source_url }}" style="color:#ffe7b3;">Get the software</a> to run your own.
+</div>
+{% endif %}
+<nav>
+  <a class="brand" href="{{ url_for('home') }}">
+    <img src="{{ url_for('static', filename='logo-sm.png') }}" alt="Microbial Digital Library logo">
+    Microbial Digital Library
+  </a>
+  <div class="links">
+    {% if current_user() %}
+    <a href="{{ url_for('catalog') }}">Catalog</a>
+    <a href="{{ url_for('add_species') }}">Add strain</a>
+    <a href="{{ url_for('storage_map') }}">Storage</a>
+    <a href="{{ url_for('upload') }}">Upload photo</a>
+    <a href="{{ url_for('connect') }}">Connect on phone</a>
+    {% if current_user().role == 'admin' %}
+    <a href="{{ url_for('export') }}">Export data</a>
+    <a href="{{ url_for('admin_home') }}">Admin{% set pj = pending_join_count() + password_help_count() %}{% if pj %} <span class="badge b-warn">{{ pj }}</span>{% endif %}</a>
+    {% endif %}
+    <a href="{{ url_for('feedback') }}">Feedback</a>
+    <a href="{{ url_for('about') }}">About</a>
+    <a href="{{ url_for('contact') }}">Contact</a>
+    {% set tenant = current_tenant() %}
+    <span class="muted small">{{ tenant.name if tenant else '' }} &middot; <a href="{{ url_for('account') }}">{{ current_user().username }}</a> ({{ current_user().role }})</span>
+    <a href="{{ url_for('logout') }}">Log out</a>
+    {% else %}
+    <a href="{{ url_for('about') }}">About</a>
+    <a href="{{ url_for('contact') }}">Contact</a>
+    <a href="{{ url_for('signup') }}">Sign up your lab</a>
+    {% endif %}
+  </div>
+</nav>
+<main>
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<footer>Microbial Digital Library. Your data is stored on the computer or server that runs this installation, not with the software's authors.
+  &middot; <a href="{{ url_for('about') }}">About</a> &middot; <a href="{{ url_for('contact') }}">Contact</a></footer>
+<!-- Shared typeahead suggestions for any media/conditions field (plate
+     uploads, per-plate edits) -- plain <datalist>s so these stay suggestions,
+     never a restriction: any free text can still be typed. -->
+<datalist id="media-suggestions">
+  <option value="YPD agar"><option value="WLN agar"><option value="MRS agar">
+  <option value="Lin's agar"><option value="Wallerstein agar"><option value="Malt extract agar">
+  <option value="Hsu's agar"><option value="SMM agar"><option value="Nutrient agar">
+</datalist>
+<datalist id="atmosphere-suggestions">
+  <option value="aerobic"><option value="anaerobic"><option value="microaerophilic">
+  <option value="5% CO2"><option value="anaerobic jar">
+</datalist>
+<script src="{{ url_for('static', filename='calendar-picker.js') }}" defer></script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Feedback summary | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Feedback summary</h1>
+<p class="muted">{{ count }} response{{ '' if count == 1 else 's' }} so far{% if count %}, {{ s.consented }} of them agreed to research use{% endif %}.
+  <a href="{{ url_for('feedback') }}">Leave your own &rarr;</a></p>
+
+{% if count %}
+{% if is_lab_admin %}
+<div class="card">
+  <strong>Download for your paper</strong>
+  <p class="muted small" style="margin:4px 0 8px;">A ZIP with <code>responses.csv</code> (one anonymous row per response, with the usage figures measured
+    when each was sent) and <code>data_dictionary.csv</code> (what every column means). Only responses where the person agreed to research use are
+    included. Names and email addresses are never included.</p>
+  <a class="btn small" href="{{ url_for('feedback_export') }}">Download research data</a>
+  <a class="btn secondary small" href="{{ url_for('feedback_export', all=1) }}">Include responses without research consent</a>
+</div>
+{% endif %}
+
+<div class="stat-row">
+  <div class="stat"><b>{{ avg_rating }}</b><span>average rating of 5</span></div>
+  <div class="stat"><b>{{ count }}</b><span>responses</span></div>
+  {% if s.sus %}<div class="stat"><b>{{ s.sus.mean }}</b><span>usability score of 100 ({{ s.sus.band }}, {{ s.sus.n }} complete)</span></div>{% endif %}
+  {% if s.nps %}<div class="stat"><b>{{ s.nps.score }}</b><span>recommend score ({{ s.nps.n }} answers)</span></div>{% endif %}
+</div>
+
+{% if s.sus %}
+<p class="muted small">Usability score: the System Usability Scale, 0 to 100. Around 68 is the usual average; above 80 is good.
+  Range here {{ s.sus.low }} to {{ s.sus.high }}{% if s.sus.sd is not none %}, standard deviation {{ s.sus.sd }}{% endif %}.
+  Recommend score: percent who gave 9 or 10 minus percent who gave 0 to 6
+  ({{ s.nps.promoters if s.nps else 0 }} promoters, {{ s.nps.passives if s.nps else 0 }} passive, {{ s.nps.detractors if s.nps else 0 }} detractors).</p>
+{% endif %}
+
+{% if s.pairs %}
+<h2>Before and after</h2>
+<div class="card">
+  <p class="muted small" style="margin-top:0;">Averages from people who gave both a before and an after time. These are self reported estimates.</p>
+  <table>
+    <tr><th>Task</th><th>People</th><th>Before (minutes)</th><th>Now (minutes)</th><th>Change</th></tr>
+    {% if s.pairs.find %}<tr><td>Find one strain</td><td>{{ s.pairs.find.n }}</td><td>{{ s.pairs.find.before }}</td><td>{{ s.pairs.find.after }}</td>
+      <td>{% if s.pairs.find.change_pct is not none %}{{ s.pairs.find.change_pct }}%{% else %}n/a{% endif %}</td></tr>{% endif %}
+    {% if s.pairs.entry %}<tr><td>Record one new strain</td><td>{{ s.pairs.entry.n }}</td><td>{{ s.pairs.entry.before }}</td><td>{{ s.pairs.entry.after }}</td>
+      <td>{% if s.pairs.entry.change_pct is not none %}{{ s.pairs.entry.change_pct }}%{% else %}n/a{% endif %}</td></tr>{% endif %}
+  </table>
+</div>
+{% endif %}
+
+{% if s.numbers %}
+<h2>Numbers people reported</h2>
+<div class="card">
+  <table>
+    <tr><th>Question</th><th>People</th><th>Mean</th><th>Median</th><th>Lowest</th><th>Highest</th><th>Total</th></tr>
+    {% for key, v in s.numbers.items() %}
+    <tr><td>{{ v.label }}{% if v.unit %} <span class="muted small">({{ v.unit }})</span>{% endif %}</td>
+        <td>{{ v.n }}</td><td>{{ v.mean }}</td><td>{{ v.median }}</td><td>{{ v.low }}</td><td>{{ v.high }}</td><td>{{ v.total }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if s.features %}
+<h2>How useful each feature was</h2>
+<div class="card">
+  <table>
+    <tr><th>Feature</th><th>Average of 5</th><th>Rated by</th><th>Did not use</th></tr>
+    {% for f in s.features %}
+    <tr><td>{{ f.label }}</td><td>{{ f.mean if f.mean is not none else 'n/a' }}</td><td>{{ f.n }}</td><td>{{ f.not_used }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<h2>Ease of use</h2>
+<div class="card">
+  <table>
+    <tr><th>Answer</th><th>Responses</th></tr>
+    {% for label, n in ease_breakdown %}
+    <tr><td>{{ label }}</td><td>{{ n }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+
+{% if feature_breakdown %}
+<h2>Most used feature</h2>
+<div class="card">
+  <table>
+    <tr><th>Feature</th><th>Responses</th></tr>
+    {% for label, n in feature_breakdown %}
+    <tr><td>{{ label }}</td><td>{{ n }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if s.likert %}
+<h2>Other ratings</h2>
+<div class="card">
+  <table>
+    <tr><th>Statement</th><th>People</th><th>Average of 5</th></tr>
+    {% for key, v in s.likert.items() %}<tr><td>{{ v.label }}</td><td>{{ v.n }}</td><td>{{ v.mean }}</td></tr>{% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if s.choices %}
+<h2>Who answered, and other choices</h2>
+{% for c in s.choices %}
+<div class="card">
+  <strong>{{ c.label }}</strong> <span class="muted small">({{ c.n }} answered)</span>
+  <table style="margin-top:6px;">
+    {% for label, n in c.rows %}<tr><td>{{ label }}</td><td style="width:90px;">{{ n }}</td></tr>{% endfor %}
+  </table>
+</div>
+{% endfor %}
+{% endif %}
+
+{% if latest and latest.strains_count is not none %}
+<h2>Usage when the latest response was sent</h2>
+<div class="card">
+  <p class="muted small" style="margin-top:0;">Measured automatically from your catalog, not typed in.</p>
+  <table>
+    <tr><td>Strains in the catalog</td><td>{{ latest.strains_count }}</td></tr>
+    <tr><td>Strains with a storage location</td><td>{{ latest.strains_with_location }}</td></tr>
+    <tr><td>Plate photos</td><td>{{ latest.plates_count }}</td></tr>
+    <tr><td>Revival checks recorded</td><td>{{ latest.revival_checks_count }}</td></tr>
+    <tr><td>Days since the first strain was entered</td><td>{{ latest.days_in_use }}</td></tr>
+    <tr><td>App version</td><td>{{ latest.app_version }}</td></tr>
+  </table>
+</div>
+{% endif %}
+
+<h2>Comments</h2>
+{% for r in comments %}
+<div class="card">
+  <p class="muted small" style="margin:0 0 6px;">
+    {{ r.rating }}/5 &middot; {{ ease_labels.get(r.ease, r.ease) }}
+    {% if r.most_used %} &middot; mostly uses: {{ feature_labels.get(r.most_used, r.most_used) }}{% endif %}
+    {% if r.name %} &middot; {{ r.name }}{% endif %}
+    &middot; {{ r.submitted_at }}
+  </p>
+  <p style="margin:0;">{{ r.improvement }}</p>
+</div>
+{% endfor %}
+{% for t in s.texts %}
+<div class="card">
+  <p class="muted small" style="margin:0 0 6px;">{{ t.title }} &middot; {{ t.when }}</p>
+  <p style="margin:0;">{{ t.text }}</p>
+</div>
+{% endfor %}
+{% if not comments and not s.texts %}
+<div class="card muted">No written comments yet, just ratings.</div>
+{% endif %}
+{% else %}
+<div class="card muted">No feedback yet. Be the first. The quick start takes under a minute.</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,7 @@
+# Caddy reverse proxy with automatic HTTPS (needs a real DNS name).
+strains.yourorg.example {
+    reverse_proxy 127.0.0.1:8000
+    request_body {
+        max_size 32MB
+    }
+}

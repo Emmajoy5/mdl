@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Feedback | Microbial Digital Library{% endblock %}
+{% block content %}
+<style>
+  .qsection { margin-top: 18px; }
+  .qsection > h2 { margin: 0 0 4px; }
+  .likert-row { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+                padding:9px 0; border-top:1px solid var(--line); }
+  .likert-row:first-of-type { border-top:none; }
+  .likert-row .stmt { flex:1 1 320px; }
+  .likert-opts { display:flex; gap:6px; }
+  .likert-opts label { display:flex; flex-direction:column; align-items:center; font-size:12px; cursor:pointer;
+                       min-width:34px; padding:3px 4px; border-radius:6px; }
+  .likert-opts input { margin:2px 0 0; }
+  .scale-note { display:flex; justify-content:space-between; font-size:12px; margin:4px 0 8px; }
+  .checks { display:flex; flex-wrap:wrap; gap:6px 18px; }
+  .checks label { font-weight:400; display:flex; align-items:center; gap:6px; cursor:pointer; }
+  .qnav { display:flex; flex-wrap:wrap; gap:6px 14px; font-size:13px; margin:0 0 6px; }
+  table.feat { width:100%; border-collapse:collapse; }
+  table.feat td { padding:7px 6px; border-top:1px solid var(--line); vertical-align:middle; }
+  table.feat td:first-child { width:55%; }
+</style>
+
+<h1>Feedback and evaluation</h1>
+<p class="muted" style="max-width:760px;">Only the first two questions are required. The rest is optional and takes about
+  eight minutes in all, and you can skip any part. Answers help improve the app and, if you agree below, support
+  published research on it. Everything stays in your own lab's database. Your name and email are never published.</p>
+<p class="qnav">
+  <a href="#overall-quick">Quick start</a>
+  {% for s in sections %}<a href="#{{ s.id }}">{{ s.title }}</a>{% endfor %}
+  <a href="#consent">Consent</a>
+</p>
+
+{% macro field(q) %}
+  {% set key = q.key %}
+  <div class="field">
+    <label for="q_{{ key }}">{{ q.label }}{% if q.unit and q.kind == 'number' %} <span class="muted small">({{ q.unit }})</span>{% endif %}</label>
+    {% if q.help %}<div class="muted small" style="margin-bottom:3px;">{{ q.help }}</div>{% endif %}
+    {% if q.kind == 'choice' %}
+      <select id="q_{{ key }}" name="{{ key }}">
+        <option value="">Choose one</option>
+        {% for v, lab in q.choices %}<option value="{{ v }}" {{ 'selected' if form.get(key) == v }}>{{ lab }}</option>{% endfor %}
+      </select>
+    {% elif q.kind == 'multi' %}
+      <div class="checks">
+        {% for v, lab in q.choices %}
+        <label><input type="checkbox" name="{{ key }}" value="{{ v }}" {{ 'checked' if v in form.getlist(key) }}> {{ lab }}</label>
+        {% endfor %}
+      </div>
+    {% elif q.kind == 'number' %}
+      <input id="q_{{ key }}" type="text" inputmode="decimal" name="{{ key }}" value="{{ form.get(key, '') }}" style="max-width:160px;">
+    {% elif q.kind == 'text' %}
+      <textarea id="q_{{ key }}" name="{{ key }}" rows="3" maxlength="2000">{{ form.get(key, '') }}</textarea>
+    {% elif q.kind == 'likert' %}
+      <div class="likert-opts" style="justify-content:flex-start;">
+        {% for i in range(1, 6) %}<label><span>{{ i }}</span><input type="radio" name="{{ key }}" value="{{ i }}" {{ 'checked' if form.get(key) == i|string }}></label>{% endfor %}
+      </div>
+      <div class="scale-note muted" style="max-width:240px;"><span>{{ q.scale[0] }}</span><span>{{ q.scale[1] }}</span></div>
+    {% endif %}
+  </div>
+{% endmacro %}
+
+<form method="post" action="{{ url_for('feedback') }}">
+  {{ csrf_field() }}
+
+  <div class="card qsection" id="overall-quick">
+    <h2>Quick start</h2>
+    <div class="field">
+      <label>Overall, how would you rate the app? *</label>
+      <select name="rating" required>
+        <option value="">Select a rating</option>
+        {% for n, lab in [(5,'5 (Excellent)'),(4,'4 (Good)'),(3,'3 (OK)'),(2,'2 (Poor)'),(1,'1 (Very poor)')] %}
+        <option value="{{ n }}" {{ 'selected' if form.get('rating') == n|string }}>{{ lab }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>How easy was it to do what you came to do today? *</label>
+      <select name="ease" required>
+        <option value="">Select one</option>
+        {% for key, label in ease_choices %}
+        <option value="{{ key }}" {{ 'selected' if form.get('ease') == key }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Which feature do you use most?</label>
+      <select name="most_used">
+        <option value="">No particular feature</option>
+        {% for key, label in feature_choices %}
+        <option value="{{ key }}" {{ 'selected' if form.get('most_used') == key }}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>What is one thing that would make this more useful for you?</label>
+      <textarea name="improvement" rows="3" maxlength="2000" placeholder="A missing feature, something confusing, anything.">{{ form.get('improvement', '') }}</textarea>
+    </div>
+  </div>
+
+  {% for s in sections %}
+  <div class="card qsection" id="{{ s.id }}">
+    <h2>{{ s.title }}</h2>
+    {% if s.intro %}<p class="muted small" style="margin-top:0;">{{ s.intro }}</p>{% endif %}
+
+    {% if s.layout == 'table' %}
+      <table class="feat">
+        {% for q in s.questions %}
+        <tr>
+          <td><label for="q_{{ q.key }}" style="font-weight:400;">{{ q.label }}</label></td>
+          <td>
+            <select id="q_{{ q.key }}" name="{{ q.key }}">
+              <option value="">Choose</option>
+              {% for v, lab in q.choices %}<option value="{{ v }}" {{ 'selected' if form.get(q.key) == v }}>{{ lab }}</option>{% endfor %}
+            </select>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+
+    {% elif s.layout == 'likert' %}
+      <div class="scale-note muted"><span>1 = {{ s.questions[0].scale[0] }}</span><span>5 = {{ s.questions[0].scale[1] }}</span></div>
+      {% for q in s.questions %}
+      <div class="likert-row">
+        <div class="stmt">{{ loop.index }}. {{ q.label }}</div>
+        <div class="likert-opts">
+          {% for i in range(1, 6) %}<label><span>{{ i }}</span><input type="radio" name="{{ q.key }}" value="{{ i }}" {{ 'checked' if form.get(q.key) == i|string }}></label>{% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+    {% else %}
+      {% for q in s.questions %}{{ field(q) }}{% endfor %}
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <div class="card qsection" id="consent">
+    <h2>Consent and contact</h2>
+    <div class="field">
+      <label class="checks" style="font-weight:400; align-items:flex-start;">
+        <input type="checkbox" name="consent_research" value="1" {{ 'checked' if form.get('consent_research') }} style="margin-top:3px;">
+        <span>I agree that my answers, without my name or email, may be used and published in research about this tool.</span>
+      </label>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Your name <span class="muted small">(optional, only if you are happy to be asked a follow up)</span></label>
+        <input type="text" name="name" maxlength="120" value="{{ form.get('name', '') }}" placeholder="Optional"></div>
+      <div class="field"><label>Your email <span class="muted small">(optional)</span></label>
+        <input type="text" name="contact_email" maxlength="200" value="{{ form.get('contact_email', '') }}" placeholder="Optional"></div>
+    </div>
+    <p class="muted small">Name and email are used only to contact you and are left out of the research export.</p>
+    <button class="btn" type="submit">Send feedback</button>
+  </div>
+</form>
+
+<p class="muted small"><a href="{{ url_for('feedback_summary') }}">See the results so far &rarr;</a></p>
+{% endblock %}

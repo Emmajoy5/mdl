@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Check import | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Check your import</h1>
+<p class="muted"><strong>{{ filename }}</strong>: {{ records|length }} row{{ '' if records|length == 1 else 's' }}.
+  Confirm what each column is, then tick the rows to import.</p>
+
+<form method="post" action="{{ url_for('admin_import_preview', token=token) }}">
+  {{ csrf_field() }}
+
+  <h2>Columns</h2>
+  <div class="card">
+    <p class="muted" style="margin-top:0;">Your columns were matched automatically. Change any that are
+      wrong, or set a column to "Ignore". After changing, press <em>Update preview</em>.</p>
+    <table>
+      <thead><tr><th>Column in your file</th><th>Example</th><th>Use it as</th></tr></thead>
+      <tbody>
+        {% for h in headers %}
+        {% set i = loop.index0 %}
+        <tr>
+          <td>{{ h or '(blank header)' }}</td>
+          <td class="muted">{{ examples[i] }}</td>
+          <td>
+            <select name="map_{{ i }}">
+              <option value="">Ignore this column</option>
+              {% for key, f in fields.items() %}
+              <option value="{{ key }}" {{ 'selected' if mapping[i] == key else '' }}>{{ f[0] }}</option>
+              {% endfor %}
+              {% for key, f in custom_defs.items() %}
+              <option value="{{ key }}" {{ 'selected' if mapping[i] == key else '' }}>Custom: {{ f.name }}</option>
+              {% endfor %}
+            </select>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <button class="btn secondary" type="submit" name="action" value="preview" style="margin-top:10px;">Update preview</button>
+  </div>
+
+  {% if not has_name %}
+  <div class="card" style="border-color:#c0392b;">
+    <strong>No genus/species column yet.</strong> Set one column to "Genus" and another to "Species"
+    (or one to "Full organism name") above, then press Update preview.
+  </div>
+  {% else %}
+  <h2>Rows</h2>
+  <p>
+    <span class="badge b-good">{{ counts.ok }} ready</span>
+    {% if counts.dupes %}<span class="badge b-muted">{{ counts.dupes }} already in your catalog / repeated</span>{% endif %}
+    {% if counts.errors %}<span class="badge b-bad">{{ counts.errors }} with errors</span>{% endif %}
+  </p>
+  <div class="card" style="overflow-x:auto;">
+    <table>
+      <thead><tr><th>Import</th><th>Row</th><th>Strain</th><th>Accessions</th><th>Notes for this row</th></tr></thead>
+      <tbody>
+        {% for r in records %}
+        <tr>
+          <td>
+            {% if r.errors or r.duplicate_of %}<input type="checkbox" disabled>
+            {% else %}<input type="checkbox" name="row" value="{{ r.row_number }}" checked>{% endif %}
+          </td>
+          <td>{{ r.row_number }}</td>
+          <td>{{ r['values'].full_name }}{% if r['values'].strain and r['values'].strain not in r['values'].full_name %} ({{ r['values'].strain }}){% endif %}</td>
+          <td>{% for cc, num in r.accessions %}{{ cc }} {{ num }}{{ '; ' if not loop.last }}{% endfor %}</td>
+          <td>
+            {% for e in r.errors %}<div style="color:#c0392b;">{{ e }}</div>{% endfor %}
+            {% if r.duplicate_of %}<div class="muted">Skipped: {{ r.duplicate_of }}.</div>{% endif %}
+            {% for w in r.warnings %}<div class="muted">{{ w }}</div>{% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <button class="btn" type="submit" name="action" value="commit"
+          {% if not counts.ok %}disabled{% endif %}>Import selected rows</button>
+  <a class="btn secondary" href="{{ url_for('admin_import') }}">Cancel</a>
+  {% endif %}
+</form>
+{% endblock %}

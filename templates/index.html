@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Catalog | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Catalog</h1>
+<p class="muted">{{ stats.species }} strains &middot; {{ stats.models }} 3D models
+  ({{ stats.print_ready }} print-ready) &middot; {{ stats.images }} plate images.</p>
+
+<form method="get" class="card" style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+  <div class="field" style="flex:1;min-width:220px;">
+    <label>Search</label>
+    <input type="search" name="q" value="{{ q }}" placeholder="Name, ID, notes..." style="width:100%;">
+  </div>
+  <div class="field">
+    <label>Collection type</label>
+    <select name="type">
+      <option value="">All types</option>
+      {% for t in type_choices %}
+      <option value="{{ t }}" {% if sel_type==t %}selected{% endif %}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label>Genus</label>
+    <select name="genus">
+      <option value="">All genera</option>
+      {% for g in genera %}
+      <option value="{{ g }}" {% if sel_genus==g %}selected{% endif %}>{{ g }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label>Brewing role</label>
+    <select name="role">
+      <option value="">All roles</option>
+      {% for r in roles %}
+      <option value="{{ r }}" {% if sel_role==r %}selected{% endif %}>{{ r }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field">
+    <label>Gram stain</label>
+    <select name="gram">
+      <option value="">All</option>
+      {% for g in gram_choices %}
+      <option value="{{ g }}" {% if sel_gram==g %}selected{% endif %}>{{ g }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field"><button class="btn" type="submit">Filter</button></div>
+</form>
+
+<div class="card" style="padding:0;overflow-x:auto;">
+<table>
+  <tr>
+    <th>ID</th><th>Name</th><th>Type</th><th>Genus / species</th><th>Gram</th>
+    <th>Models</th><th>Images</th><th></th>
+  </tr>
+  {% for o in orgs %}
+  <tr>
+    <td class="small muted">{{ o.collection_id }}</td>
+    <td><a href="{{ url_for('species', cid=o.collection_id) }}">{{ o.full_name }}</a></td>
+    <td>
+      {% if o.collection_type == 'validation' %}<span class="badge b-warn">validation</span>
+      {% else %}<span class="badge b-muted">{{ o.collection_type }}</span>{% endif %}
+    </td>
+    <td>{{ o.genus }} {{ o.species }}</td>
+    <td>
+      {% if o.gram_stain == 'positive' %}<span class="badge b-good">+</span>
+      {% elif o.gram_stain == 'negative' %}<span class="badge b-warn">-</span>
+      {% elif o.gram_stain == 'variable' %}<span class="badge b-muted">variable</span>
+      {% elif o.gram_stain == 'not_done' %}<span class="badge b-muted">not done</span>
+      {% else %}<span class="muted small">n/a</span>{% endif %}
+    </td>
+    <td>{{ o.model_count }} ({{ o.print_ready or 0 }} ready)</td>
+    <td>{{ o.image_count }}</td>
+    <td><a class="btn small secondary" href="{{ url_for('species', cid=o.collection_id) }}">View</a></td>
+  </tr>
+  {% else %}
+  <tr><td colspan="8" class="muted">No strains match these filters.</td></tr>
+  {% endfor %}
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Reset link | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Reset link for {{ target.username }}</h1>
+<div class="card" style="max-width:720px;">
+  <p style="margin-top:0;">Give this link to <strong>{{ target.full_name or target.username }}</strong> in person, or by a
+    message only they can read. It works once, for {{ hours }} hours, and lets them choose their own password.
+    Any older link for this account has stopped working.</p>
+  <div class="field">
+    <label for="reset-link">Reset link</label>
+    <input id="reset-link" type="text" value="{{ link }}" readonly style="width:100%; font-family:ui-monospace,Menlo,Consolas,monospace;">
+  </div>
+  <p style="margin-bottom:0;"><button class="btn" type="button" id="copy-link">Copy link</button>
+    <a class="btn secondary" href="{{ url_for('admin_home') }}">Back to Admin</a></p>
+</div>
+<p class="muted small" style="max-width:720px;">This page is shown once. If the link is lost, make a new one.</p>
+<script>
+  document.getElementById("copy-link").addEventListener("click", function () {
+    var src = document.getElementById("reset-link"), btn = this;
+    src.select();
+    var done = function () { btn.textContent = "Copied"; };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(src.value).then(done, function () { document.execCommand("copy"); done(); });
+    } else { document.execCommand("copy"); done(); }
+  });
+</script>
+{% endblock %}

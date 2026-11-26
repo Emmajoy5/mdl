@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Add strain | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Add a strain</h1>
+<form method="post" class="card" enctype="multipart/form-data">
+  {{ csrf_field() }}
+  <h2 style="margin-top:0;">Taxonomy</h2>
+  <div class="field-row">
+    <div class="field"><label>Genus *</label><input type="text" name="genus" required></div>
+    <div class="field"><label>Species *</label><input type="text" name="species" required placeholder="e.g. cerevisiae, or spp."></div>
+    <div class="field"><label>Strain</label><input type="text" name="strain"></div>
+    <div class="field"><label>NCBI taxonomy ID</label><input type="text" name="ncbi"></div>
+  </div>
+  <div class="field"><label>Full display name (optional, defaults to Genus species)</label><input type="text" name="full_name" style="width:100%;"></div>
+
+  <h2>Collection</h2>
+  <div class="field-row">
+    <div class="field">
+      <label>Collection type</label>
+      <select name="collection_type">
+        {% for t in type_choices %}<option value="{{ t }}" {% if t=='library' %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>Added by</label><input type="text" name="added_by" placeholder="Your name"></div>
+    <div class="field">
+      <label>Gram stain</label>
+      <select name="gram_stain">
+        <option value="">Select</option>
+        {% for g in gram_choices %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>Micrograph (optional)</label><input type="file" name="gram_image" accept="image/*"></div>
+    <div class="field"><label>Stain date</label><input type="text" class="date-input" name="gram_stain_date" value="{{ today if today else '' }}"></div>
+    <div class="field"><label>Stain time</label><input type="time" name="gram_stain_time"></div>
+  </div>
+  <div class="field"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
+  <div class="field"><label>Tags (comma-separated)</label><input type="text" name="tags" style="width:100%;"></div>
+
+  <h2>Sample source</h2>
+  <div class="field-row">
+    <div class="field">
+      <label>Source</label>
+      <select name="sample_source_type" id="sample_source_type" onchange="toggleSampleSource()">
+        <option value="">Select</option>
+        {% for key, label in source_choices %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field" id="sample_source_lab_field" style="display:none;">
+      <label>Source lab</label>
+      <select name="sample_source_lab_id">
+        <option value="">Select a source lab</option>
+        {% for lab in labs %}<option value="{{ lab.lab_id }}">{{ lab.name }}</option>{% endfor %}
+      </select>
+      <p class="muted small" style="margin:4px 0 0;">Not in the list? An admin can add it under Admin &rarr; Source labs.</p>
+    </div>
+    <div class="field" id="sample_source_ref_field" style="display:none;">
+      <label>Online reference database</label>
+      <input type="text" name="sample_source_ref" placeholder="e.g. NCBI, a published strain collection">
+    </div>
+  </div>
+
+  <h2>Accession (optional)</h2>
+  <div class="field-row">
+    <div class="field"><label>Culture collection</label><input type="text" name="collection" placeholder="e.g. NCYC, ATCC"></div>
+    <div class="field"><label>Accession number</label><input type="text" name="accession"></div>
+  </div>
+
+  <h2>Storage location *</h2>
+  <p class="muted small" style="margin-top:0;">Required, so this isolate can be found again. Freezer or fridge and box are needed; the rest helps you find the exact tube.</p>
+  <div class="field-row">
+    <div class="field"><label>Freezer / fridge *</label><input type="text" name="storage_freezer" required placeholder="e.g. Freezer 2"></div>
+    <div class="field"><label>Rack / shelf</label><input type="text" name="storage_rack" placeholder="e.g. Rack 1"></div>
+    <div class="field"><label>Box *</label><input type="text" name="storage_box" required placeholder="e.g. Box 4"></div>
+    <div class="field"><label>Position in box</label><input type="text" name="storage_position" placeholder="e.g. A3"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Format</label><input type="text" name="storage_format" placeholder="Glycerol stock / slant / lyophilized"></div>
+    <div class="field"><label>Storage temp &deg;C</label><input type="text" name="storage_temp_c" placeholder="e.g. -80"></div>
+    <div class="field"><label>Date stored</label><input type="text" class="date-input" name="date_stored" value="{{ today if today else '' }}"></div>
+    <div class="field"><label>Other location notes</label><input type="text" name="storage_location" placeholder="Anything that doesn't fit above"></div>
+  </div>
+
+  {% include "_custom_inputs.html" %}
+
+  <h2>Viability monitoring</h2>
+  <div class="field-row">
+    <div class="field">
+      <label>Category</label>
+      <select name="viability_category">
+        {% for v in viability_choices %}<option value="{{ v }}" {% if v=='unknown' %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>Revival interval (days, if periodic)</label><input type="number" name="revival_interval_days" min="1"></div>
+    <div class="field"><label>Last revival before this app (optional)</label><input type="text" class="date-input" name="revival_baseline_date" placeholder="YYYY-MM-DD">
+      <div class="small muted">If left blank, a periodic strain's first due date counts from the date stored.</div></div>
+  </div>
+
+  <h2>Brewing relevance</h2>
+  <div class="field-row">
+    <div class="field">
+      <label>Role</label>
+      <select name="role">
+        <option value="">Select</option>
+        {% for r in role_choices %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>Spoilage risk</label>
+      <select name="risk">
+        <option value="">Select</option>
+        <option value="none">none</option><option value="low">low</option>
+        <option value="medium">medium</option><option value="high">high</option>
+      </select>
+    </div>
+    <div class="field"><label>Attenuation min %</label><input type="text" name="att_min"></div>
+    <div class="field"><label>Attenuation max %</label><input type="text" name="att_max"></div>
+    <div class="field"><label>Temp range °C</label><input type="text" name="temp" placeholder="e.g. 18-24"></div>
+  </div>
+  <div class="field"><label>Flavor compounds</label><input type="text" name="flavor" style="width:100%;"></div>
+  <div class="field"><label>Off-flavor potential</label><input type="text" name="off_flavor" style="width:100%;"></div>
+  <div class="field"><label>Application notes</label><textarea name="application" rows="2"></textarea></div>
+
+  <button class="btn" type="submit">Add strain</button>
+</form>
+<script>
+  function toggleSampleSource() {
+    var val = document.getElementById('sample_source_type').value;
+    document.getElementById('sample_source_lab_field').style.display = (val === 'lab') ? '' : 'none';
+    document.getElementById('sample_source_ref_field').style.display = (val === 'online') ? '' : 'none';
+  }
+</script>
+{% endblock %}

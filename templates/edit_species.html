@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ org.full_name }} | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Edit {{ org.full_name }}</h1>
+<form method="post" class="card" enctype="multipart/form-data">
+  {{ csrf_field() }}
+  <h2 style="margin-top:0;">Taxonomy &amp; collection</h2>
+  <div class="field-row">
+    <div class="field"><label>Strain</label><input type="text" name="strain" value="{{ org.strain or '' }}"></div>
+    <div class="field"><label>Full display name</label><input type="text" name="full_name" value="{{ org.full_name }}"></div>
+    <div class="field"><label>NCBI taxonomy ID</label><input type="text" name="ncbi" value="{{ org.ncbi_taxonomy_id or '' }}"></div>
+    <div class="field">
+      <label>Collection type</label>
+      <select name="collection_type">
+        {% for t in type_choices %}<option value="{{ t }}" {% if org.collection_type==t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Target status</label>
+      <select name="target_status">
+        {% for s in ['initial','candidate','curated','retired'] %}
+        <option value="{{ s }}" {% if org.target_status==s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>Added by</label><input type="text" name="added_by" value="{{ org.added_by or '' }}"></div>
+  </div>
+  <div class="field"><label>Notes</label><textarea name="notes" rows="3">{{ org.notes or '' }}</textarea></div>
+
+  <h2>Lab metadata</h2>
+  <div class="field-row">
+    <div class="field">
+      <label>Gram stain</label>
+      <select name="gram_stain">
+        <option value="">Select</option>
+        {% for g in gram_choices %}<option value="{{ g }}" {% if org.gram_stain==g %}selected{% endif %}>{{ g }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>New micrograph (optional)</label><input type="file" name="gram_image" accept="image/*">
+      <p class="small muted" style="margin:4px 0 0;">A new dated history entry is only added when you attach a file here. Changing the dropdown alone just updates the current result.</p>
+    </div>
+    <div class="field"><label>Stain date</label><input type="text" class="date-input" name="gram_stain_date" value="{{ today if today else '' }}"></div>
+    <div class="field"><label>Stain time</label><input type="time" name="gram_stain_time"></div>
+    <div class="field"><label>Stained by</label><input type="text" name="gram_stained_by" placeholder="Your name"></div>
+    <div class="field"><label>Media</label><input type="text" name="media" value="{{ org.media or '' }}"></div>
+    <div class="field"><label>Oxygen requirement</label><input type="text" name="oxygen_requirement" value="{{ org.oxygen_requirement or '' }}"></div>
+    <div class="field"><label>Optimal temp °C</label><input type="text" name="optimal_temp_c" value="{{ org.optimal_temp_c or '' }}"></div>
+  </div>
+  <div class="field"><label>Morphology notes</label><textarea name="morphology_notes" rows="2">{{ org.morphology_notes or '' }}</textarea></div>
+
+  <h2>Sample source</h2>
+  <div class="field-row">
+    <div class="field">
+      <label>Source</label>
+      <select name="sample_source_type" id="sample_source_type" onchange="toggleSampleSource()">
+        <option value="">Select</option>
+        {% for key, label in source_choices %}
+        <option value="{{ key }}" {% if org.sample_source_type==key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field" id="sample_source_lab_field" style="display:none;">
+      <label>Source lab</label>
+      <select name="sample_source_lab_id">
+        <option value="">Select a source lab</option>
+        {% for lab in labs %}
+        <option value="{{ lab.lab_id }}" {% if org.sample_source_lab_id==lab.lab_id %}selected{% endif %}>{{ lab.name }}</option>
+        {% endfor %}
+      </select>
+      <p class="muted small" style="margin:4px 0 0;">Not in the list? An admin can add it under Admin &rarr; Source labs.</p>
+    </div>
+    <div class="field" id="sample_source_ref_field" style="display:none;">
+      <label>Online reference database</label>
+      <input type="text" name="sample_source_ref" value="{{ org.sample_source if org.sample_source_type=='online' else '' }}"
+             placeholder="e.g. NCBI, a published strain collection">
+    </div>
+  </div>
+
+  <h2>Storage</h2>
+  <div class="field-row">
+    <div class="field"><label>Freezer / fridge</label><input type="text" name="storage_freezer" value="{{ org.storage_freezer or '' }}" placeholder="e.g. Freezer 2"></div>
+    <div class="field"><label>Rack / shelf</label><input type="text" name="storage_rack" value="{{ org.storage_rack or '' }}" placeholder="e.g. Rack 1"></div>
+    <div class="field"><label>Box</label><input type="text" name="storage_box" value="{{ org.storage_box or '' }}" placeholder="e.g. Box 4"></div>
+    <div class="field"><label>Position in box</label><input type="text" name="storage_position" value="{{ org.storage_position or '' }}" placeholder="e.g. A3"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Other location notes</label><input type="text" name="storage_location" value="{{ org.storage_location or '' }}" placeholder="Anything that doesn't fit above"></div>
+    <div class="field"><label>Format</label><input type="text" name="storage_format" value="{{ org.storage_format or '' }}" placeholder="Glycerol stock / slant / lyophilized"></div>
+    <div class="field"><label>Storage temp °C</label><input type="text" name="storage_temp_c" value="{{ org.storage_temp_c or '' }}"></div>
+    <div class="field"><label>Date stored</label><input type="text" class="date-input" name="date_stored" value="{{ org.date_stored or '' }}"></div>
+    <div class="field"><label>Last verified</label><input type="text" class="date-input" name="last_verified_date" value="{{ org.last_verified_date or '' }}"></div>
+  </div>
+
+  {% include "_custom_inputs.html" %}
+
+  <h2>Viability monitoring</h2>
+  <div class="field-row">
+    <div class="field">
+      <label>Category</label>
+      <select name="viability_category">
+        {% for v in viability_choices %}<option value="{{ v }}" {% if org.viability_category==v %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>Revival interval (days)</label><input type="number" name="revival_interval_days" min="1" value="{{ org.revival_interval_days or '' }}"></div>
+    <div class="field"><label>Last revival before this app</label><input type="text" class="date-input" name="revival_baseline_date" value="{{ org.revival_baseline_date or '' }}" placeholder="YYYY-MM-DD">
+      <div class="small muted">Checks logged in the app take over from this date. Changes are recorded in the history.</div></div>
+    {% if org.viability_category == 'periodic' %}
+    <div class="field"><label>Current status</label>
+      {% set badge = revival_badge(revival) %}
+      <span class="badge {{ badge.cls }}">{{ badge.label }}</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <h2>Brewing relevance</h2>
+  <div class="field-row">
+    <div class="field">
+      <label>Role</label>
+      <select name="role">
+        <option value="">Select</option>
+        {% for r in role_choices %}<option value="{{ r }}" {% if rel and rel.role==r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>Spoilage risk</label>
+      <select name="risk">
+        <option value="">Select</option>
+        {% for v in ['none','low','medium','high'] %}
+        <option value="{{ v }}" {% if rel and rel.spoilage_risk==v %}selected{% endif %}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field"><label>Attenuation min %</label><input type="text" name="att_min" value="{{ rel.attenuation_min if rel else '' }}"></div>
+    <div class="field"><label>Attenuation max %</label><input type="text" name="att_max" value="{{ rel.attenuation_max if rel else '' }}"></div>
+    <div class="field"><label>Temp range °C</label><input type="text" name="temp" value="{{ rel.temp_range_c if rel else '' }}"></div>
+  </div>
+  <div class="field"><label>Flavor compounds</label><input type="text" name="flavor" style="width:100%;" value="{{ rel.flavor_compounds if rel else '' }}"></div>
+  <div class="field"><label>Off-flavor potential</label><input type="text" name="off_flavor" style="width:100%;" value="{{ rel.off_flavor_potential if rel else '' }}"></div>
+  <div class="field"><label>Application notes</label><textarea name="application" rows="2">{{ rel.application_notes if rel else '' }}</textarea></div>
+
+  <button class="btn" type="submit">Save changes</button>
+  <a class="btn secondary" href="{{ url_for('species', cid=cid) }}">Cancel</a>
+</form>
+<script>
+  function toggleSampleSource() {
+    var val = document.getElementById('sample_source_type').value;
+    document.getElementById('sample_source_lab_field').style.display = (val === 'lab') ? '' : 'none';
+    document.getElementById('sample_source_ref_field').style.display = (val === 'online') ? '' : 'none';
+  }
+  toggleSampleSource();
+</script>
+{% endblock %}

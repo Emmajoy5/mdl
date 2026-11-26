@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Log in | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Log in</h1>
+<p class="muted">Enter your lab account to use the catalog.</p>
+
+{% if demo_mode %}
+<div class="card" style="margin-bottom:14px;">
+  <b>Public demo.</b> Sign in with username <code>{{ demo_credentials[0] }}</code> and password
+  <code>{{ demo_credentials[1] }}</code>. Everything resets every {{ demo_reset_hours|round|int }} hours.
+</div>
+{% endif %}
+<form method="post" action="{{ url_for('login') }}" class="card" style="max-width:360px;">
+  {{ csrf_field() }}
+  <div class="field">
+    <label>Username</label>
+    <input type="text" name="username" autofocus required>
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input type="password" name="password" required>
+  </div>
+  <button class="btn" type="submit">Log in</button>
+  {% if not demo_mode %}<p class="small" style="margin:12px 0 0;"><a href="{{ url_for('pwreset.forgot') }}">Forgot your password?</a></p>{% endif %}
+</form>
+<p class="muted small" style="margin-top:14px;">New to the lab? <a href="{{ url_for('signup') }}">Ask to join</a> with the join code from your lab admin.</p>
+{% endblock %}

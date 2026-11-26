@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Import strains | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Import strains</h1>
+<p class="muted">Bring in an existing strain list from Excel or CSV instead of retyping it. You'll
+  see a preview first. Nothing is added until you confirm, and rows that already exist in your
+  catalog are flagged so you don't create duplicates.</p>
+
+<form method="post" action="{{ url_for('admin_import') }}" enctype="multipart/form-data" class="card">
+  {{ csrf_field() }}
+  <div class="field">
+    <label>File (.csv or .xlsx, up to 5,000 rows)</label>
+    <input type="file" name="file" accept=".csv,.tsv,.txt,.xlsx" required>
+  </div>
+  <button class="btn" type="submit">Upload and preview</button>
+  <a class="btn secondary" href="{{ url_for('admin_import_template') }}">Download a template</a>
+</form>
+
+<h2>What your file needs</h2>
+<div class="card">
+  <ul style="margin:0; padding-left:20px; line-height:1.7;">
+    <li>A <strong>header row</strong> on the first line. Your own column names are fine: the app
+      suggests what each column is and you can correct any suggestion on the next page.</li>
+    <li>Each row needs a <strong>genus and species</strong>, either in two columns or in one
+      "Organism" column (<em>Saccharomyces cerevisiae Ale-01</em> is split for you).</li>
+    <li>Everything else is optional: strain, accession numbers (<em>NCYC 505; ATCC 18824</em>),
+      tags, Gram stain, last revival date and interval, media, storage, source lab, notes.</li>
+    <li>Dates read day-first (03/04/2025 is 3 April); YYYY-MM-DD is always safe.</li>
+    <li>Imported strains get collection IDs the same way hand-entered ones do.</li>
+  </ul>
+</div>
+{% endblock %}

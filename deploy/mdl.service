@@ -1,0 +1,17 @@
+# Linux without Docker. Install as /etc/systemd/system/mdl.service
+# Assumes: code in /opt/mdl, a virtual environment in /opt/mdl/venv,
+# settings in /opt/mdl/.env, data in /var/lib/mdl, a user named "mdl".
+[Unit]
+Description=Microbial Digital Library
+After=network.target
+
+[Service]
+User=mdl
+WorkingDirectory=/opt/mdl
+EnvironmentFile=/opt/mdl/.env
+Environment=APP_DATA_DIR=/var/lib/mdl
+ExecStart=/opt/mdl/venv/bin/gunicorn --workers 1 --threads 8 --bind 127.0.0.1:8000 wsgi:app
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

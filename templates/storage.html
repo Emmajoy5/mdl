@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Storage map | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Storage map</h1>
+<p class="muted">Where every strain is kept, by freezer, rack and box. Set a strain's location on its
+  edit page, or import it from a spreadsheet.</p>
+
+{% if unplaced and not (flt_freezer or flt_box) %}
+<div class="card" style="border-color:#f0b429;">
+  <strong>{{ unplaced|length }} of {{ total }} strain{{ '' if total == 1 else 's' }} {{ 'has' if unplaced|length == 1 else 'have' }} no location recorded.</strong>
+  <a href="#unplaced">Show them</a> and add a freezer, box and position so they can be found.
+</div>
+{% endif %}
+
+{% if conflicts %}
+<div class="card" style="border-color:#f0b429;">
+  <strong>{{ conflicts }} position{{ ' is' if conflicts == 1 else 's are' }} recorded for more than one strain.</strong>
+  Check the rows marked below: one of them is probably in the wrong place on paper.
+</div>
+{% endif %}
+
+{% if flt_freezer or flt_box %}
+<p>Showing {{ flt_freezer or 'all freezers' }}{% if flt_box %} / {{ flt_box }}{% endif %}.
+  <a href="{{ url_for('storage_map') }}">Show everything</a></p>
+{% endif %}
+
+{% for b in boxes %}
+<div class="card">
+  <h2 style="margin-top:0;">{{ b.freezer }}{% if b.rack %} / {{ b.rack }}{% endif %} / {{ b.box }}
+    <span class="muted small">&middot; {{ b.entries|length }} strain{{ '' if b.entries|length == 1 else 's' }}</span></h2>
+  <table>
+    <thead><tr><th>Position</th><th>Strain</th><th>ID</th></tr></thead>
+    <tbody>
+      {% for e in b.entries %}
+      <tr>
+        <td>{{ e.storage_position or 'n/a' }}{% if e.collection_id in clash %} <span class="badge b-warn">shared</span>{% endif %}</td>
+        <td>{{ e.full_name }}{% if e.strain and e.strain not in e.full_name %} ({{ e.strain }}){% endif %}</td>
+        <td><a href="{{ url_for('species', cid=e.collection_id) }}">{{ e.collection_id }}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <a class="btn secondary small" style="margin-top:8px;"
+     href="{{ url_for('label_picker', freezer=b.freezer if b.freezer != '(no freezer)' else '', box=b.box if b.box != '(no box)' else '') }}">Print labels for this box</a>
+</div>
+{% else %}
+<div class="card"><p class="muted" style="margin:0;">No strains have a structured storage location yet.</p></div>
+{% endfor %}
+
+{% if unplaced and not (flt_freezer or flt_box) %}
+<h2 id="unplaced">No location recorded ({{ unplaced|length }})</h2>
+<div class="card">
+  <p class="muted" style="margin-top:0;">{{ unplaced|length }} of {{ total }} strains have no freezer/rack/box/position yet.</p>
+  {% for u in unplaced[:50] %}<a href="{{ url_for('edit_species', cid=u.collection_id) }}" class="small">{{ u.collection_id }}</a>{{ ', ' if not loop.last }}{% endfor %}
+  {% if unplaced|length > 50 %}<span class="muted small">and {{ unplaced|length - 50 }} more</span>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Upload plate photos | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Upload plate photos</h1>
+<p class="muted">Add one plate or several at once. Each can have its own media and incubation
+  conditions. Each photo is cropped to the dish automatically, and coverage, elevation and margin
+  are estimated. A 3D relief isn't built automatically: pick any plate's "Build 3D model" link on
+  the species page afterward if you want one. Colony counts aren't auto-detected either. For a
+  viability/validation strain, log the count by hand on its species page when you do a revival
+  check.</p>
+
+<form method="post" action="{{ url_for('upload', cid=cid) if cid else url_for('upload') }}"
+      enctype="multipart/form-data" class="card" id="upload-form">
+  {{ csrf_field() }}
+  {% if not cid %}
+  <div class="field">
+    <label>Strain *</label>
+    <select name="collection_id" required>
+      <option value="">Select a strain</option>
+      {% for o in orgs %}<option value="{{ o.collection_id }}">{{ o.full_name }} ({{ o.collection_id }})</option>{% endfor %}
+    </select>
+  </div>
+  {% else %}
+  <input type="hidden" name="collection_id" value="{{ cid }}">
+  {% endif %}
+
+  <div class="field"><label>Uploaded by</label><input type="text" name="uploaded_by" placeholder="Your name"></div>
+
+  <h2>Plates</h2>
+  {% if not (current_tenant() and current_tenant().keep_original_photos) %}
+  <p class="small muted" style="margin-top:-6px;">Large phone photos are turned upright and stored in less space, with no visible loss.</p>
+  {% endif %}
+  <div id="plate-rows">
+    <div class="card plate-row" style="margin-bottom:10px;">
+      <div class="field-row">
+        <div class="field"><label>Photo *</label><input type="file" name="image" accept="image/*" required></div>
+        <div class="field"><label>Media</label><input type="text" name="media" list="media-suggestions" placeholder="e.g. YPD agar"></div>
+        <div class="field"><label>Conditions</label><input type="text" name="atmosphere" list="atmosphere-suggestions" placeholder="aerobic / anaerobic"></div>
+        <div class="field"><label>Plate size</label>
+          <select name="plate_size">
+            {% for mm in plate_sizes %}<option value="{{ mm }}" {% if mm == default_size %}selected{% endif %}>{{ mm }} mm</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      <button type="button" class="btn small danger remove-plate-row" style="display:none;">Remove this plate</button>
+    </div>
+  </div>
+  <button type="button" class="btn secondary small" id="add-plate-row">+ Add another plate</button>
+
+  <h2>Capture metadata (optional, applies to every plate above)</h2>
+  <div class="field-row">
+    <div class="field"><label>Protocol version</label><input type="text" name="protocol"></div>
+    <div class="field"><label>Lighting</label><input type="text" name="lighting" placeholder="top / transmitted / diffuse"></div>
+    <div class="field"><label>Angle</label><input type="text" name="angle" placeholder="nadir (top-down)"></div>
+    <div class="field"><label>Resolution</label><input type="text" name="resolution"></div>
+    <div class="field"><label>Background</label><input type="text" name="background"></div>
+    <div class="field"><label>License</label><input type="text" name="license"></div>
+    <div class="field"><label>Captured by</label><input type="text" name="captured_by"></div>
+    <div class="field"><label>Captured date</label><input type="text" class="date-input" name="captured_date"></div>
+    <div class="field"><label>Captured time</label><input type="time" name="captured_time"></div>
+  </div>
+  <div class="field"><label><input type="checkbox" name="scale_bar" style="width:auto;"> Scale bar present</label></div>
+
+  <button class="btn" type="submit">Upload</button>
+</form>
+
+<script>
+(function () {
+  "use strict";
+  var container = document.getElementById("plate-rows");
+  var addBtn = document.getElementById("add-plate-row");
+  if (!container || !addBtn) return;
+
+  function updateRemoveButtons() {
+    var rows = container.querySelectorAll(".plate-row");
+    rows.forEach(function (row) {
+      var btn = row.querySelector(".remove-plate-row");
+      if (btn) btn.style.display = rows.length > 1 ? "" : "none";
+    });
+  }
+
+  addBtn.addEventListener("click", function () {
+    var rows = container.querySelectorAll(".plate-row");
+    var clone = rows[rows.length - 1].cloneNode(true);
+    clone.querySelectorAll("input").forEach(function (input) { input.value = ""; });
+    container.appendChild(clone);
+    updateRemoveButtons();
+  });
+
+  container.addEventListener("click", function (e) {
+    if (e.target.classList.contains("remove-plate-row")) {
+      var rows = container.querySelectorAll(".plate-row");
+      if (rows.length > 1) {
+        e.target.closest(".plate-row").remove();
+        updateRemoveButtons();
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

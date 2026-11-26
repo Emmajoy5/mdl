@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Connect | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Connect on your phone</h1>
+<p class="muted">Scan this on any phone or laptop connected to the same lab Wi-Fi/network.
+  Nothing needs installing, and it shows the same live data as everyone else sees.</p>
+<div class="card" style="text-align:center;max-width:360px;">
+  {% if qr_available %}
+  <img src="{{ url_for('qr_png') }}" alt="QR code" style="width:220px;height:220px;background:#fff;border-radius:8px;padding:10px;">
+  {% else %}
+  <p class="small muted">QR codes need <code>pip install segno</code>; you can still type the address below.</p>
+  {% endif %}
+  <p style="margin-top:14px;"><a href="{{ lan_url }}">{{ lan_url }}</a></p>
+  <p class="small muted">If this doesn't load on another device, make sure that device is on the
+    same Wi-Fi/network as this computer, and that this app is still running here.</p>
+</div>
+<div class="card" style="max-width:480px;">
+  <h2 style="margin-top:0;">Install as an app</h2>
+  <p class="small">Open the link above in your phone's browser, then use "Add to Home Screen"
+    (Safari share menu, or Chrome's menu) to install it like a regular app. It'll keep opening
+    this same shared library.</p>
+</div>
+{% endblock %}

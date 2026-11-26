@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}My account | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>My account</h1>
+<p class="muted">Signed in as <strong>{{ current_user().username }}</strong>{% if current_user().full_name %} ({{ current_user().full_name }}){% endif %}.</p>
+
+<h2>Email address for password resets</h2>
+<form method="post" action="{{ url_for('pwreset.account_email') }}" class="card" style="max-width:560px;">
+  {{ csrf_field() }}
+  <p class="muted" style="margin-top:0;">Used only to send you a reset link if you forget your password.
+    {% if not mail_ready() %}This server is not set up to send email yet, so for now your lab administrator makes
+    reset links.{% endif %} Leave it empty if you would rather ask your administrator.</p>
+  <div class="field"><label for="email">Email address</label>
+    <input id="email" type="email" name="email" autocomplete="email" maxlength="200" value="{{ current_user().email or '' }}"></div>
+  <button class="btn secondary" type="submit">Save email address</button>
+</form>
+
+<h2>Change password</h2>
+<form method="post" action="{{ url_for('account') }}" class="card" style="max-width:420px;">
+  {{ csrf_field() }}
+  <div class="field"><label>Current password</label>
+    <input type="password" name="current_password" autocomplete="current-password" required></div>
+  <div class="field"><label>New password</label>
+    <input type="password" name="new_password" autocomplete="new-password" minlength="{{ min_length }}" required>
+    <div class="small muted">At least {{ min_length }} characters.</div></div>
+  <div class="field"><label>Repeat new password</label>
+    <input type="password" name="confirm_password" autocomplete="new-password" minlength="{{ min_length }}" required></div>
+  <button class="btn" type="submit">Change password</button>
+</form>
+{% endblock %}

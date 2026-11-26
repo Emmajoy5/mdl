@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Set up your lab | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Set up your lab</h1>
+<p class="muted" style="max-width:640px;">This is a new installation. Name your lab and create the first admin
+  account. You only do this once. Colleagues then ask to join from the sign-in page, and you approve them.</p>
+<form method="post" action="{{ url_for('setup') }}" class="card" style="max-width:440px;">
+  {{ csrf_field() }}
+  <div class="field">
+    <label>Setup code</label>
+    <input type="text" name="setup_code" required autocomplete="off" autocapitalize="characters" autofocus>
+    <p class="muted small" style="margin:4px 0 0;">Shown in the window where the app was started, and saved as
+      <code>setup-code.txt</code> in the app's data folder. It stops anyone else on the network setting up the lab first.</p>
+  </div>
+  <div class="field">
+    <label>Lab name</label>
+    <input type="text" name="lab_name" required placeholder="e.g. Quality Control Laboratory">
+  </div>
+  <div class="field">
+    <label>Your username</label>
+    <input type="text" name="username" required>
+  </div>
+  <div class="field">
+    <label>Your full name (optional)</label>
+    <input type="text" name="full_name">
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input type="password" name="password" minlength="8" required>
+    <div class="small muted">At least 8 characters.</div>
+  </div>
+  <div class="field" style="display:flex; align-items:center; gap:8px;">
+    <input type="checkbox" name="include_examples" id="include_examples" style="width:auto;">
+    <label for="include_examples" style="margin:0;">Add a few example strains to look around with</label>
+  </div>
+  <button class="btn" type="submit">Set up the lab</button>
+</form>
+<p class="muted small" style="margin-top:14px; max-width:640px;">Your data is stored on the computer or server that
+  runs this installation. See <a href="{{ url_for('about') }}">About</a> for details.</p>
+{% endblock %}

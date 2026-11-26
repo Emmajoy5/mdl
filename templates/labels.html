@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Labels | {{ lab_name or 'Microbial Digital Library' }}</title>
+<style>
+  :root { --w: 70mm; --h: 37mm; --qr: 24mm; --fs: 9pt; }
+  .size-small { --w: 50mm; --h: 25mm; --qr: 17mm; --fs: 6.5pt; }
+  .size-large { --w: 100mm; --h: 50mm; --qr: 36mm; --fs: 12pt; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 12px; background: #fff; color: #000; }
+  .toolbar { font-size: 13px; background: #eef3f8; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .toolbar button, .toolbar a { font: inherit; padding: 6px 12px; border: 1px solid #567; background: #fff; border-radius: 4px; cursor: pointer; color: #000; text-decoration: none; }
+  .warn { color: #8a5a00; width: 100%; }
+  .sheet { display: flex; flex-wrap: wrap; gap: 2mm; }
+  .label { width: var(--w); height: var(--h); border: 0.3mm dashed #999; padding: 1.5mm; display: flex; gap: 2mm; align-items: center; overflow: hidden; page-break-inside: avoid; break-inside: avoid; font-size: var(--fs); line-height: 1.2; }
+  .qr { width: var(--qr); height: var(--qr); flex: none; }
+  .qr svg { width: 100%; height: 100%; display: block; shape-rendering: crispEdges; }
+  .txt { min-width: 0; }
+  .id { font-weight: bold; font-size: 1.15em; letter-spacing: .02em; }
+  .nm { font-style: italic; overflow-wrap: anywhere; }
+  .meta { overflow-wrap: anywhere; }
+  .where { font-weight: bold; margin-top: .3em; }
+  .lab { color: #555; font-size: .8em; margin-top: .3em; }
+  @media print {
+    body { padding: 0; }
+    .toolbar { display: none; }
+    .label { border-color: transparent; }
+    @page { margin: 8mm; }
+  }
+</style>
+</head>
+<body class="size-{{ size }}">
+<div class="toolbar">
+  <button onclick="window.print()">Print</button>
+  <a href="{{ url_for('label_picker') }}">Back</a>
+  {% for s, t in [('small','Small'),('standard','Standard'),('large','Large')] %}
+    {% if s != size %}<a href="{{ url_for('print_labels', size=s, cid=cids) }}">{{ t }}</a>{% endif %}
+  {% endfor %}
+  <span>{{ labels|length }} label{{ '' if labels|length == 1 else 's' }} &middot; size: {{ size }}</span>
+  {% if qr_blocked %}
+  <div class="warn">QR codes are left off: this computer isn't connected to a network, so a phone could not open
+    them. Connect it to the lab network, or set <code>PUBLIC_BASE_URL</code>, then reprint.</div>
+  {% elif has_qr and not public_url_set %}
+  <div class="warn">QR codes open <strong>{{ base }}</strong>, this computer's address on the lab network, from any phone
+    on the same network. If that address changes, printed codes stop working: set <code>PUBLIC_BASE_URL</code> to a
+    fixed address before printing labels you will keep.</div>
+  {% elif not has_qr %}
+  <div class="warn">QR codes need the <code>segno</code> package (<code>pip install segno</code>); labels still print without them.</div>
+  {% endif %}
+</div>
+<div class="sheet">
+  {% for l in labels %}
+  <div class="label">
+    {% if l.qr %}<div class="qr">{{ l.qr }}</div>{% endif %}
+    <div class="txt">
+      <div class="id">{{ l.cid }}</div>
+      <div class="nm">{{ l.name }}</div>
+      {% if l.strain and l.strain not in l.name %}<div class="meta">{{ l.strain }}</div>{% endif %}
+      {% if l.accessions %}<div class="meta">{{ l.accessions }}</div>{% endif %}
+      {% if l.where %}<div class="where">{{ l.where }}</div>{% endif %}
+      {% if lab_name %}<div class="lab">{{ lab_name }}</div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+</body>
+</html>

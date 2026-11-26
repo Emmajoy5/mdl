@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ heading or 'Something went wrong' }} | Microbial Digital Library{% endblock %}
+{% block content %}
+<div class="card" style="max-width:480px;">
+  <h1>{{ heading or 'Something went wrong' }}</h1>
+  <p>{{ message }}</p>
+  <p class="small muted"><a href="javascript:history.back()">&larr; Go back</a></p>
+</div>
+{% endblock %}

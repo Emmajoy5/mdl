@@ -1,0 +1,591 @@
+{% extends "base.html" %}
+{% block title %}{{ org.full_name }} | Microbial Digital Library{% endblock %}
+{% block content %}
+<script type="module" src="{{ url_for('static', filename='vendor/model-viewer.min.js') }}"></script>
+
+<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+  <div>
+    <p class="small muted" style="margin:0;">{{ cid }}
+      {% if org.collection_type == 'validation' %}<span class="badge b-warn">validation / QC</span>
+      {% else %}<span class="badge b-muted">{{ org.collection_type }}</span>{% endif %}
+    </p>
+    <h1>{{ org.full_name }}</h1>
+    <p class="muted">{{ org.genus }} {{ org.species }}{% if org.strain %} &middot; {{ org.strain }}{% endif %}
+      {% if org.ncbi_taxonomy_id %} &middot; NCBI txid {{ org.ncbi_taxonomy_id }}{% endif %}</p>
+    {% if org.sample_source_type == 'lab' %}
+    <p class="small muted" style="margin:4px 0 0;">Sample source: Source lab{% if sample_source_lab_name %}: {{ sample_source_lab_name }}{% endif %}</p>
+    {% elif org.sample_source_type == 'online' %}
+    <p class="small muted" style="margin:4px 0 0;">Sample source: Online reference database{% if org.sample_source %}: {{ org.sample_source }}{% endif %}</p>
+    {% endif %}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <a class="btn secondary" href="{{ url_for('edit_species', cid=cid) }}">Edit</a>
+    <a class="btn secondary" href="{{ url_for('print_labels', cid=cid) }}" target="_blank">Print label</a>
+    <form method="post" action="{{ url_for('generate', cid=cid) }}" style="display:inline;">
+      {{ csrf_field() }}
+      <button class="btn" type="submit">Generate 3D model</button>
+    </form>
+    {% if current_user() and current_user()['role'] == 'admin' %}
+    <details style="display:inline-block;">
+      <summary class="btn danger" style="list-style:none;">Delete</summary>
+      <form method="post" action="{{ url_for('delete_species', cid=cid) }}"
+            onsubmit="return confirm('Delete this strain? A full copy of its record is kept in the audit log.');"
+            style="margin-top:8px;display:flex;gap:6px;">
+        {{ csrf_field() }}
+        <input type="text" name="reason" required placeholder="Reason (required)">
+        <button class="btn small danger" type="submit">Delete strain</button>
+      </form>
+    </details>
+    {% endif %}
+  </div>
+</div>
+
+{% if org.notes %}<p>{{ org.notes }}</p>{% endif %}
+
+{% set where = storage_summary(org) %}
+{% if where or org.storage_format or org.storage_temp_c or org.date_stored or custom|selectattr('value')|list %}
+<div class="card" style="margin-bottom:16px;">
+  <div class="field-row">
+    {% if where %}<div><label>Storage</label><a href="{{ url_for('storage_map', box=org.storage_box or '', freezer=org.storage_freezer or '') }}">{{ where }}</a>{% if org.storage_location and org.storage_freezer %}<div class="small muted">{{ org.storage_location }}</div>{% endif %}</div>{% endif %}
+    {% if org.storage_format %}<div><label>Format</label>{{ org.storage_format }}</div>{% endif %}
+    {% if org.storage_temp_c %}<div><label>Storage temp</label>{{ org.storage_temp_c }} &deg;C</div>{% endif %}
+    {% if org.date_stored %}<div><label>Date stored</label>{{ org.date_stored }}</div>{% endif %}
+    {% for f in custom if f.value %}<div><label>{{ f.name }}</label>{{ f.value }}</div>{% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Viability monitoring -->
+<h2>Viability monitoring</h2>
+<div class="card">
+  <div class="field-row">
+    <div>
+      <label>Category</label>
+      {% if org.viability_category == 'periodic' %}<span class="badge b-warn">periodic</span>
+      {% elif org.viability_category == 'stable' %}<span class="badge b-good">stable</span>
+      {% elif org.viability_category == 'longTerm' %}<span class="badge b-muted">long-term storage</span>
+      {% else %}<span class="badge b-muted">unknown</span>{% endif %}
+    </div>
+    {% if org.viability_category == 'periodic' %}
+    <div><label>Revival interval</label>{% if org.revival_interval_days %}{{ org.revival_interval_days }} days{% else %}n/a{% endif %}</div>
+    <div><label>Status</label>
+      {% set badge = revival_badge(revival) %}
+      <span class="badge {{ badge.cls }}">{{ badge.label }}</span>
+    </div>
+    <div><label>Last passing revival</label>{{ org.last_revival_date or 'none recorded' }}{% if org.last_revival_time %} {{ org.last_revival_time }}{% endif %}
+      {% if revival.baseline_source == 'date_stored' %}<div class="small muted">Due date counted from the date stored.</div>{% endif %}
+    </div>
+    <div><label>Latest check</label>
+      {% if org.growth_success %}<span class="{% if org.growth_success=='pass' %}badge b-good{% else %}badge b-bad{% endif %}">{{ org.growth_success }}</span>{% else %}n/a{% endif %}
+    </div>
+    <div><label>Last colony count</label>{{ org.colony_count if org.colony_count is not none else 'n/a' }}</div>
+    {% endif %}
+  </div>
+  {% if org.contamination_notes %}<p class="small muted">Contamination notes: {{ org.contamination_notes }}</p>{% endif %}
+
+  {% if org.viability_category == 'periodic' %}
+  <details style="margin-top:14px;">
+    <summary style="cursor:pointer;color:var(--accent);">Log a revival check</summary>
+    <form method="post" action="{{ url_for('log_revival', cid=cid) }}" style="margin-top:12px;">
+      {{ csrf_field() }}
+      <div class="field-row">
+        <div class="field">
+          <label>Revival date</label>
+          <input type="text" class="date-input" name="revival_date" value="{{ today if today else '' }}">
+        </div>
+        <div class="field">
+          <label>Time</label>
+          <input type="time" name="revival_time">
+        </div>
+        <div class="field">
+          <label>Performed by</label>
+          <input type="text" name="performed_by" placeholder="Your name">
+        </div>
+        <div class="field">
+          <label>Growth result</label>
+          <select name="growth_success" required>
+            <option value="">Select</option>
+            <option value="pass">Pass</option>
+            <option value="fail">Fail</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Colony count</label>
+          <input type="number" name="colony_count" min="0" step="1" placeholder="e.g. 42">
+        </div>
+      </div>
+      <div class="field">
+        <label>Contamination notes (optional)</label>
+        <textarea name="contamination_notes" rows="2"></textarea>
+      </div>
+      <button class="btn" type="submit">Log check</button>
+    </form>
+  </details>
+
+  {% if revivals %}
+  <table style="margin-top:14px;">
+    <tr><th>Date</th><th>Time</th><th>Result</th><th>Colony count</th><th>Performed by</th><th>Notes</th><th>Logged</th><th></th></tr>
+    {% for r in revivals %}
+    <tr>
+      <td>{{ r.revival_date }}</td>
+      <td>{{ r.revival_time or 'n/a' }}</td>
+      <td>{% if r.growth_success %}<span class="{% if r.growth_success=='pass' %}badge b-good{% else %}badge b-bad{% endif %}">{{ r.growth_success }}</span>{% else %}n/a{% endif %}</td>
+      <td>{{ r.colony_count if r.colony_count is not none else 'n/a' }}</td>
+      <td>{{ r.performed_by or 'n/a' }}</td>
+      <td class="small">{{ r.contamination_notes or 'n/a' }}</td>
+      <td class="small muted">{{ r.created_at or 'n/a' }}{% if r.entered_by_user %} by {{ r.entered_by_user }}{% endif %}</td>
+      <td>
+        <details><summary class="small" style="cursor:pointer;color:var(--accent);">Void</summary>
+          <form method="post" action="{{ url_for('void_revival', cid=cid, log_id=r.log_id) }}" style="margin-top:6px;display:flex;gap:6px;">
+            {{ csrf_field() }}
+            <input type="text" name="reason" required placeholder="Reason" style="width:140px;">
+            <button class="btn small secondary" type="submit">Void</button>
+          </form>
+        </details>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+  {% endif %}
+</div>
+
+<!-- Gram stain -->
+<h2>Gram stain</h2>
+<div class="card">
+  <div class="field-row">
+    <div><label>Current result</label>
+      {% if org.gram_stain == 'positive' %}<span class="badge b-good">positive</span>
+      {% elif org.gram_stain == 'negative' %}<span class="badge b-warn">negative</span>
+      {% elif org.gram_stain == 'variable' %}<span class="badge b-muted">variable</span>
+      {% elif org.gram_stain == 'not_done' %}<span class="badge b-muted">not done</span>
+      {% else %}<span class="badge b-muted">not recorded</span>{% endif %}
+    </div>
+  </div>
+  <button type="button" class="btn small" id="gram-photo-btn" style="margin-top:10px;">Add a Gram stain photo</button>
+
+  <details style="margin-top:14px;" id="gram-log">
+    <summary style="cursor:pointer;color:var(--accent);">Log a Gram stain, with a photo if you have one</summary>
+    <form method="post" action="{{ url_for('log_gram_stain', cid=cid) }}"
+          enctype="multipart/form-data" style="margin-top:12px;">
+      {{ csrf_field() }}
+      <div class="field">
+        <label for="gram-photo">Gram stain photo (micrograph)</label>
+        <input type="file" name="image" id="gram-photo" accept="image/*">
+        <p class="small muted" style="margin:4px 0 0;">Optional. On a phone you can take the picture straight away. A photo can be saved without a result.</p>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Result</label>
+          <select name="result">
+            <option value="">Select</option>
+            {% for g in gram_choices %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="gram_cell_shape">Cell shape seen</label>
+          <select name="cell_shape" id="gram_cell_shape" class="shape-pick" data-arr="gram_cell_arrangement" data-auto="">
+            <option value="">Not recorded</option>
+            {% for value, label in shape_labels %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="gram_cell_arrangement">Arrangement seen</label>
+          <select name="cell_arrangement" id="gram_cell_arrangement">
+            <option value="">Not recorded</option>
+            {% for value, label in arrangement_labels %}
+            <option value="{{ value }}" data-kinds="{% for k, arrs in arrangements_for.items() if value in arrs %}{{ k }} {% endfor %}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Stain date</label>
+          <input type="text" class="date-input" name="stain_date" value="{{ today if today else '' }}">
+        </div>
+        <div class="field">
+          <label>Time</label>
+          <input type="time" name="stain_time">
+        </div>
+        <div class="field">
+          <label>Stained by</label>
+          <input type="text" name="stained_by" placeholder="Your name">
+        </div>
+        <div class="field">
+          <label>Magnification</label>
+          <input type="text" name="magnification" placeholder="e.g. 1000x oil immersion">
+        </div>
+      </div>
+      <p class="small muted" style="margin:-4px 0 10px;">The 3D cell model is drawn as {{ cell_text }} now. Record what you see, and the model follows the latest Gram stain.</p>
+      <div class="field">
+        <label>Notes (optional)</label>
+        <textarea name="notes" rows="2" style="width:100%;"></textarea>
+      </div>
+      <button class="btn" type="submit">Save Gram stain</button>
+    </form>
+  </details>
+  <script>
+  (function () {
+    var btn = document.getElementById('gram-photo-btn');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var d = document.getElementById('gram-log');
+      d.open = true;
+      d.scrollIntoView({behavior: 'smooth', block: 'start'});
+      var input = document.getElementById('gram-photo');
+      if (input) input.click();
+    });
+  })();
+  </script>
+
+  {% if gram_images %}
+  <div class="field-row" style="margin-top:14px;">
+    {% for g in gram_images %}
+    <div class="card" style="flex:1;min-width:220px;">
+      {% if g.file_path %}
+      <a href="{{ url_for('serve_upload', fn=g.file_path|basename) }}" target="_blank" rel="noopener" title="Open full size">
+      <img src="{{ url_for('serve_upload', fn=g.file_path|basename) }}" alt="Gram stain micrograph"
+           style="width:100%;max-width:220px;height:160px;object-fit:cover;border-radius:8px;background:#0a0e17;"></a>
+      {% endif %}
+      <p class="small" style="margin:8px 0 0;">
+        {% if g.result == 'positive' %}<span class="badge b-good">positive</span>
+        {% elif g.result == 'negative' %}<span class="badge b-warn">negative</span>
+        {% elif g.result == 'variable' %}<span class="badge b-muted">variable</span>
+        {% elif g.result == 'not_done' %}<span class="badge b-muted">not done</span>
+        {% else %}<span class="badge b-muted">n/a</span>{% endif %}
+        &middot; {{ g.stain_date or 'n/a' }}{% if g.stain_time %} {{ g.stain_time }}{% endif %}
+        {% if g.cell_shape %}<br><span class="small">{{ describe_cell({'kind': g.cell_shape, 'arrangement': g.cell_arrangement or 'single'})[:1]|upper }}{{ describe_cell({'kind': g.cell_shape, 'arrangement': g.cell_arrangement or 'single'})[1:] }}</span>{% endif %}
+      </p>
+      <p class="small muted" style="margin:4px 0 0;">
+        {% if g.stained_by %}Stained by {{ g.stained_by }}{% endif %}{% if g.stained_by and g.magnification %} &middot; {% endif %}{% if g.magnification %}{{ g.magnification }}{% endif %}
+      </p>
+      {% if g.notes %}<p class="small" style="margin:4px 0 0;">{{ g.notes }}</p>{% endif %}
+      <p class="small muted" style="margin:4px 0 0;">Logged {{ g.created_at or 'n/a' }}{% if g.entered_by_user %} by {{ g.entered_by_user }}{% endif %}</p>
+      <details style="margin-top:8px;"><summary class="small" style="cursor:pointer;color:var(--accent);">Void this entry</summary>
+        <form method="post" action="{{ url_for('delete_gram_stain', cid=cid, image_id=g.image_id) }}" style="margin-top:6px;display:flex;gap:6px;">
+          {{ csrf_field() }}
+          <input type="text" name="reason" required placeholder="Reason" style="width:140px;">
+          <button class="btn small secondary" type="submit">Void</button>
+        </form>
+      </details>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted small" style="margin-top:10px;">No Gram stain recorded yet.</p>
+  {% endif %}
+</div>
+
+<!-- Accessions / tags / brewing relevance -->
+<div class="field-row">
+  <div class="card">
+    <h2 style="margin-top:0;">Accessions</h2>
+    {% if accs %}
+      {% for a in accs %}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
+          <span>{{ a.culture_collection }} {{ a.accession_number }}</span>
+          <form method="post" action="{{ url_for('delete_accession', cid=cid, accession_id=a.accession_id) }}">
+            {{ csrf_field() }}
+            <button class="btn small secondary" type="submit">Remove</button>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}<p class="muted small">No accessions recorded.</p>{% endif %}
+    {% if tags %}
+      <div style="margin-top:10px;">{% for t in tags %}<span class="tag">{{ t.tag }}</span>{% endfor %}</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0;">Brewing relevance</h2>
+    {% if rel %}
+      <table>
+        <tr><td>Role</td><td>{{ rel.role or 'n/a' }}</td></tr>
+        <tr><td>Attenuation</td><td>{{ rel.attenuation_min or 'n/a' }} to {{ rel.attenuation_max or 'n/a' }}%</td></tr>
+        <tr><td>Temp range</td><td>{% if rel.temp_range_c %}{{ rel.temp_range_c }} °C{% else %}n/a{% endif %}</td></tr>
+        <tr><td>Flavor compounds</td><td>{{ rel.flavor_compounds or 'n/a' }}</td></tr>
+        <tr><td>Off-flavor potential</td><td>{{ rel.off_flavor_potential or 'n/a' }}</td></tr>
+        <tr><td>Spoilage risk</td><td>
+          {% set risk = rel.spoilage_risk %}
+          {% if risk == 'high' %}<span class="badge b-bad">high</span>
+          {% elif risk == 'medium' %}<span class="badge b-warn">medium</span>
+          {% elif risk == 'low' %}<span class="badge b-good">low</span>
+          {% else %}<span class="badge b-muted">{{ risk or 'n/a' }}</span>{% endif %}
+        </td></tr>
+      </table>
+    {% else %}<p class="muted small">No brewing-relevance data recorded.</p>{% endif %}
+  </div>
+</div>
+
+<!-- 3D models -->
+<h2>3D models</h2>
+<div class="card" id="cell-shape" style="margin-bottom:14px;">
+  <p style="margin:0;"><strong>Cell model:</strong> {{ cell_text[:1]|upper }}{{ cell_text[1:] }}
+    <span class="small muted">({{ cell_basis }})</span></p>
+  {% if cell.basis in ('gram', 'default', 'name') %}
+  <p class="small" style="margin:6px 0 0;color:var(--warn);">The app isn't sure of this organism's cell shape. Record what you see with the next Gram stain, or correct the model below.</p>
+  {% endif %}
+  <details style="margin-top:10px;" {% if cell.basis in ('gram', 'default') %}open{% endif %}>
+    <summary style="cursor:pointer;color:var(--accent);">Change the cell shape or arrangement</summary>
+    <form method="post" action="{{ url_for('set_cell_shape', cid=cid) }}" style="margin-top:10px;">
+      {{ csrf_field() }}
+      <div class="field-row">
+        <div class="field">
+          <label for="cell_shape">Shape</label>
+          <select name="cell_shape" id="cell_shape" class="shape-pick" data-arr="cell_arrangement" data-auto="{{ auto_kind }}">
+            <option value="">Automatic</option>
+            {% for value, label in shape_labels %}
+            <option value="{{ value }}" {% if org.cell_shape == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="cell_arrangement">Arrangement</label>
+          <select name="cell_arrangement" id="cell_arrangement">
+            <option value="">Automatic</option>
+            {% for value, label in arrangement_labels %}
+            <option value="{{ value }}" data-kinds="{% for k, arrs in arrangements_for.items() if value in arrs %}{{ k }} {% endfor %}"
+                    {% if org.cell_arrangement == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <button class="btn" type="submit">Save and rebuild the cell model</button>
+      <p class="small muted" style="margin:8px 0 0;">Automatic follows the latest Gram stain that has a cell shape, then the morphology notes (for example "cocci in clusters"), then the species, then the genus. A correction here lasts until the next Gram stain with a shape. The model is an illustration, not a measurement.</p>
+    </form>
+  </details>
+  <script>
+  // Only offer arrangements that go with the chosen shape (both shape forms).
+  document.querySelectorAll('select.shape-pick').forEach(function (shape) {
+    var arr = document.getElementById(shape.getAttribute('data-arr'));
+    if (!arr) return;
+    function sync() {
+      var kind = shape.value || shape.getAttribute('data-auto');
+      Array.prototype.forEach.call(arr.options, function (o) {
+        if (!o.value) return;
+        var ok = !!kind && (' ' + o.getAttribute('data-kinds')).indexOf(' ' + kind + ' ') !== -1;
+        o.disabled = !ok;
+        o.hidden = !ok;
+        if (!ok && o.selected) arr.value = '';
+      });
+    }
+    shape.addEventListener('change', sync);
+    sync();
+  });
+  </script>
+</div>
+{% if models %}
+<div class="field-row">
+  {% for mdl in models %}
+  <div class="card">
+    <p class="small muted" style="margin:0 0 8px;">{{ mdl.model_type }} &middot; {{ mdl.source }}
+      {% if mdl.is_watertight %}<span class="badge b-good">watertight</span>{% else %}<span class="badge b-warn">check mesh</span>{% endif %}
+    </p>
+    {% set glb = mdl.file_path.rsplit('.',1)[0] + '.glb' %}
+    <model-viewer src="{{ url_for('serve_model', fn=glb|basename) }}"
+                  camera-controls auto-rotate
+                  camera-orbit="{{ '25deg 48deg 72%' if mdl.model_type != 'cell' else '20deg 70deg 105%' }}"
+                  environment-image="neutral" exposure="1.0" shadow-intensity="0.7" shadow-softness="1"
+                  class="mdl-viewer" style="width:100%;height:{{ 340 if mdl.model_type != 'cell' else 300 }}px;border-radius:10px;"></model-viewer>
+    <p class="viewer-msg small" hidden style="color:var(--warn);margin:6px 0 0;"></p>
+    <p class="small muted" style="margin:6px 0 0;">
+      {% if mdl.model_type == 'photo_relief' %}Colonies found in the photo are drawn as domes whose height grows with their width (about 4&times; exaggerated). The photo gives no height, so this is not a measured profile.
+      {% elif mdl.model_type == 'colony' %}{% set dish = (mdl.notes or '').split(' mm dish')[0].split('on a ')[-1] if ' mm dish' in (mdl.notes or '') else '90' %}Illustrative plate on a {{ dish }} mm dish; colony sizes are typical, shapes and colours are not measurements. The STL is the same layout as this view.
+      {% else %}Illustrative cell shape and arrangement; Gram colour from this strain's record where known. {{ (mdl.notes or '').split(' GLB companion')[0] }}{% endif %}
+    </p>
+    <a class="btn small secondary" href="{{ url_for('serve_model', fn=mdl.file_path|basename) }}" style="margin-top:8px;">Download STL</a>
+    <button type="button" class="btn small secondary bg-toggle" style="margin-top:8px;">White background</button>
+  </div>
+  {% endfor %}
+  <script>
+  // Dark or white viewer background; the choice is remembered in this browser only.
+  (function () {
+    var DARK = 'radial-gradient(circle at 50% 38%, #1d2a40 0%, #0a0e17 75%)', LIGHT = '#ffffff';
+    function get() { try { return localStorage.getItem('mdlViewerBg') || 'dark'; } catch (e) { return 'dark'; } }
+    function set(v) { try { localStorage.setItem('mdlViewerBg', v); } catch (e) {} }
+    function apply(mode) {
+      document.querySelectorAll('.mdl-viewer').forEach(function (v) {
+        v.style.background = mode === 'light' ? LIGHT : DARK;
+        v.style.border = mode === 'light' ? '1px solid #dfe5ee' : 'none';
+      });
+      document.querySelectorAll('.bg-toggle').forEach(function (b) {
+        b.textContent = mode === 'light' ? 'Dark background' : 'White background';
+      });
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+      apply(get());
+      document.querySelectorAll('.bg-toggle').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var next = get() === 'light' ? 'dark' : 'light'; set(next); apply(next);
+        });
+      });
+    });
+  })();
+  // A blank dark box says nothing, so say why when a 3D preview can't show.
+  (function () {
+    function show(viewer, text) {
+      var msg = viewer.parentNode.querySelector('.viewer-msg');
+      if (msg) { msg.textContent = text; msg.hidden = false; }
+    }
+    window.addEventListener('load', function () {
+      var viewers = document.querySelectorAll('model-viewer');
+      if (!window.customElements || !customElements.get('model-viewer')) {
+        viewers.forEach(function (v) {
+          show(v, "The 3D viewer didn't load, so there's no preview here. You can still download the STL.");
+        });
+        return;
+      }
+      viewers.forEach(function (v) {
+        v.addEventListener('error', function () {
+          show(v, "This model couldn't be displayed (your browser may have 3D graphics turned off). You can still download the STL.");
+        });
+      });
+    });
+  })();
+  </script>
+</div>
+{% else %}
+<div class="card muted">No 3D models yet. Click "Generate 3D model" above, or upload a plate photo for a real photo-driven relief.</div>
+{% endif %}
+
+<!-- Plate images -->
+<h2>Plate images</h2>
+<a class="btn secondary" href="{{ url_for('upload', cid=cid) }}">Upload a plate photo</a>
+{% if imgs %}
+{% for img in imgs %}
+<div class="card" style="margin-top:14px;" id="plate-{{ img.image_id }}">
+  <div style="display:flex;gap:18px;flex-wrap:wrap;">
+    <img src="{{ url_for('serve_upload', fn=img.file_path|basename) }}" alt="plate photo"
+         style="width:220px;height:220px;object-fit:cover;border-radius:8px;background:#0a0e17;">
+    <div style="flex:1;min-width:240px;">
+      <p class="small muted" style="margin:0 0 6px;">
+        Uploaded by {{ img.uploaded_by or 'unknown' }}{% if img.upload_timestamp %} on {{ img.upload_timestamp|replace('T', ' ') }}{% endif %}
+      </p>
+      <p class="small">
+        Media: <b>{{ img.media or 'n/a' }}</b> &middot; Conditions: <b>{{ img.atmosphere or 'n/a' }}</b>
+        {% if img.captured_date %} &middot; Captured {{ img.captured_date }}{% if img.captured_time %} {{ img.captured_time }}{% endif %}{% endif %}
+        &middot; Dish: <b>{{ (img.plate_diameter_mm or 90)|int }} mm</b>
+      </p>
+      {% if img.cv_morphology_json %}
+        {% set morph = img.cv_morphology_json | fromjson %}
+        <p class="small">Coverage: {{ morph.coverage_pct }}% &middot; {{ morph.density_desc or morph.elevation_desc }} &middot; {{ morph.margin_desc }}
+          <span class="muted">(automatic, not benchmarked; a visual aid, not a measurement)</span></p>
+        {% if morph.dish_detected == false %}<p class="small" style="color:var(--warn);">The dish edge wasn't found in this photo, so a centred circle was assumed. Retake it with the whole dish in frame for a better result.</p>{% endif %}
+        {% if morph.uneven_background %}<p class="small" style="color:var(--warn);">The background behind the agar looks uneven (a hand, a glove or folds showing through), so these figures are less reliable. For a better result, photograph the plate on a plain dark or white surface.</p>{% endif %}
+        {% if morph.excluded_marks_pct %}<p class="small muted">Thin marks (writing, print) excluded: {{ morph.excluded_marks_pct }}% of the plate.</p>{% endif %}
+        {% if morph.ignored_pct %}<p class="small muted">Painted over by hand and ignored: {{ morph.ignored_pct }}% of the plate.</p>{% endif %}
+      {% endif %}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center;">
+        <form method="post" action="{{ url_for('build_plate_replica', cid=cid, image_id=img.image_id) }}">
+          {{ csrf_field() }}
+          <button class="btn small secondary" type="submit">Build 3D model (optional)</button>
+        </form>
+        <details><summary class="btn small danger" style="list-style:none;">Void photo</summary>
+          <form method="post" action="{{ url_for('delete_image', cid=cid, image_id=img.image_id) }}" style="margin-top:6px;display:flex;gap:6px;">
+            {{ csrf_field() }}
+            <input type="text" name="reason" required placeholder="Reason" style="width:140px;">
+            <button class="btn small danger" type="submit">Void</button>
+          </form>
+        </details>
+      </div>
+      {% if img.entered_by_user %}<p class="small muted" style="margin-top:6px;">Entered by account {{ img.entered_by_user }}</p>{% endif %}
+      <details style="margin-top:10px;">
+        <summary class="small" style="cursor:pointer;color:var(--accent);">Change media / conditions / capture details</summary>
+        <form method="post" action="{{ url_for('edit_plate_image', cid=cid, image_id=img.image_id) }}" style="margin-top:8px;">
+          {{ csrf_field() }}
+          <div class="field-row">
+            <div class="field"><label>Media</label><input type="text" name="media" value="{{ img.media or '' }}" placeholder="e.g. YPD agar" list="media-suggestions"></div>
+            <div class="field"><label>Conditions</label><input type="text" name="atmosphere" value="{{ img.atmosphere or '' }}" placeholder="aerobic / anaerobic" list="atmosphere-suggestions"></div>
+            <div class="field"><label>Captured date</label><input type="text" class="date-input" name="captured_date" value="{{ img.captured_date or '' }}"></div>
+            <div class="field"><label>Captured time</label><input type="time" name="captured_time" value="{{ img.captured_time or '' }}"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Protocol version</label><input type="text" name="protocol" value="{{ img.capture_protocol_version or '' }}"></div>
+            <div class="field"><label>Lighting</label><input type="text" name="lighting" value="{{ img.lighting or '' }}"></div>
+            <div class="field"><label>Angle</label><input type="text" name="angle" value="{{ img.angle or '' }}"></div>
+            <div class="field"><label>Resolution</label><input type="text" name="resolution" value="{{ img.resolution or '' }}"></div>
+            <div class="field"><label>Background</label><input type="text" name="background" value="{{ img.background or '' }}"></div>
+            <div class="field"><label>Captured by</label><input type="text" name="captured_by" value="{{ img.captured_by or '' }}"></div>
+          </div>
+          <button class="btn small secondary" type="submit">Save</button>
+        </form>
+      </details>
+      <details style="margin-top:10px;" class="fix3d">
+        <summary class="small" style="cursor:pointer;color:var(--accent);">Fix the 3D for this photo: plate size, and writing or labels raised as colonies</summary>
+        <form method="post" action="{{ url_for('fix_plate_3d', cid=cid, image_id=img.image_id) }}" style="margin-top:8px;">
+          {{ csrf_field() }}
+          <div class="field" style="max-width:200px;">
+            <label for="size-{{ img.image_id }}">Plate size</label>
+            <select name="plate_size" id="size-{{ img.image_id }}">
+              {% for mm in plate_sizes %}<option value="{{ mm }}" {% if mm == ((img.plate_diameter_mm or 90)|int) %}selected{% endif %}>{{ mm }} mm</option>{% endfor %}
+            </select>
+          </div>
+          <p class="small" style="margin:8px 0 6px;">Paint over anything that is not growth: pen marks, a label, printed text, glare. Those areas stay flat in the 3D model and are left out of the coverage figure. The writing still shows on the photo.</p>
+          <div class="paint-wrap" style="position:relative;display:inline-block;max-width:100%;touch-action:none;">
+            <img class="paint-photo" src="{{ url_for('serve_upload', fn=img.file_path|basename) }}" alt="plate photo to paint on"
+                 style="display:block;max-width:100%;max-height:70vh;width:auto;height:auto;border-radius:8px;">
+            <canvas class="paint-canvas" style="position:absolute;left:0;top:0;cursor:crosshair;border-radius:8px;"></canvas>
+          </div>
+          <input type="hidden" name="ignore_areas" class="paint-data" value="{{ img.ignore_areas or '[]' }}">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;">
+            <label class="small" style="display:flex;gap:6px;align-items:center;">Brush
+              <input type="range" class="paint-brush" min="1" max="8" value="3" style="width:110px;">
+            </label>
+            <button type="button" class="btn small secondary paint-undo">Undo</button>
+            <button type="button" class="btn small secondary paint-clear">Clear painting</button>
+            <button type="submit" class="btn small">Save and rebuild the 3D</button>
+          </div>
+        </form>
+      </details>
+      <details style="margin-top:10px;">
+        <summary class="small" style="cursor:pointer;color:var(--accent);">Background looks wrong? Mark it manually</summary>
+        <form method="post" action="{{ url_for('mark_background', cid=cid, image_id=img.image_id) }}" style="margin-top:8px;display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+          {{ csrf_field() }}
+          <div class="field"><label>X (0-1, left=0)</label><input type="number" step="0.01" min="0" max="1" name="x" style="width:90px;"></div>
+          <div class="field"><label>Y (0-1, top=0)</label><input type="number" step="0.01" min="0" max="1" name="y" style="width:90px;"></div>
+          <button class="btn small secondary" type="submit">Save marker</button>
+        </form>
+        {% if img.bg_marker_x is not none %}
+        <form method="post" action="{{ url_for('clear_background_marker', cid=cid, image_id=img.image_id) }}" style="margin-top:6px;">
+          {{ csrf_field() }}
+          <button class="btn small secondary" type="submit">Clear marker</button>
+        </form>
+        {% endif %}
+      </details>
+    </div>
+  </div>
+</div>
+{% endfor %}
+<script src="{{ url_for('static', filename='plate-paint.js') }}"></script>
+{% else %}
+<p class="muted">No plate images uploaded yet.</p>
+{% endif %}
+
+{% if voided %}
+<h2>Voided entries</h2>
+<div class="card">
+  <p class="small muted" style="margin-top:0;">Entries are never deleted. Voided ones are kept here with who voided them and why.</p>
+  <table>
+    <tr><th>Type</th><th>Dated</th><th>Detail</th><th>Voided</th><th>By</th><th>Reason</th></tr>
+    {% for v in voided %}
+    <tr><td>{{ v.kind }}</td><td>{{ v.dated or 'n/a' }}</td><td>{{ v.what or 'n/a' }}</td>
+        <td class="small">{{ v.voided_at }}</td><td>{{ v.voided_by or 'n/a' }}</td><td>{{ v.void_reason }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if history %}
+<details style="margin-top:18px;">
+  <summary style="cursor:pointer;color:var(--accent);">Change history for this record ({{ history|length }})</summary>
+  <table style="margin-top:10px;">
+    <tr><th>When</th><th>Account</th><th>Action</th><th>Detail</th></tr>
+    {% for h in history %}
+    <tr><td class="small">{{ h.created_at }}</td><td>{{ h.username or 'n/a' }}</td><td>{{ h.action }}</td>
+        <td class="small" style="word-break:break-word;">{{ h.detail }}</td></tr>
+    {% endfor %}
+  </table>
+</details>
+{% endif %}
+{% endblock %}

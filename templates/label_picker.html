@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Print labels | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Print labels</h1>
+<p class="muted">Pick the strains to label. Each label carries a QR code that opens the strain's page,
+  its ID, name, accession numbers and storage position.</p>
+<form method="get" action="{{ url_for('print_labels') }}" class="card">
+  <div style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:12px;">
+    <div class="field" style="margin-bottom:0;"><label>Label size</label>
+      <select name="size">
+        <option value="small">Small (50 x 25 mm, tube / vial)</option>
+        <option value="standard" selected>Standard (70 x 37 mm)</option>
+        <option value="large">Large (100 x 50 mm, box / bag)</option>
+      </select></div>
+    <button class="btn" type="submit">Open print sheet</button>
+    <button class="btn secondary" type="button" id="toggle-all">Select / clear all</button>
+  </div>
+  <table>
+    <thead><tr><th></th><th>ID</th><th>Strain</th><th>Storage</th></tr></thead>
+    <tbody>
+      {% for o in orgs %}
+      {% set show = (not flt_freezer or (o.storage_freezer or '') == flt_freezer) and (not flt_box or (o.storage_box or '') == flt_box) %}
+      {% if show %}
+      <tr>
+        <td><input type="checkbox" name="cid" value="{{ o.collection_id }}" {{ 'checked' if flt_freezer or flt_box else '' }}></td>
+        <td>{{ o.collection_id }}</td><td>{{ o.full_name }}</td><td class="muted">{{ storage_summary(o) }}</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</form>
+<script>
+document.getElementById('toggle-all').addEventListener('click', function () {
+  var boxes = document.querySelectorAll('input[name=cid]');
+  var any = Array.prototype.some.call(boxes, function (b) { return !b.checked; });
+  boxes.forEach(function (b) { b.checked = any; });
+});
+</script>
+{% endblock %}

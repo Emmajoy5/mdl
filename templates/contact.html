@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Contact | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Contact</h1>
+<p class="muted" style="max-width:760px;">Questions, problems, ideas, or asking for the join code?
+  Send a message below. It goes to this lab's admins, not to the authors of the software. To learn what the tool does first, see
+  <a href="{{ url_for('about') }}">About</a>.</p>
+
+{% if contact.any %}
+<h2>Who runs this installation</h2>
+<div class="card">
+  {% if contact.name %}<div><strong>{{ contact.name }}</strong></div>{% endif %}
+  {% if contact.org %}<div>{{ contact.org }}</div>{% endif %}
+  {% if contact.email %}<div>Email: <a href="mailto:{{ contact.email }}">{{ contact.email }}</a></div>{% endif %}
+  {% if contact.phone %}<div>Phone: {{ contact.phone }}</div>{% endif %}
+  {% if contact.website %}<div>Website: <a href="{{ contact.website }}" rel="noopener noreferrer">{{ contact.website }}</a></div>{% endif %}
+  {% if contact.note %}<p class="muted small" style="margin:8px 0 0;">{{ contact.note }}</p>{% endif %}
+</div>
+{% endif %}
+
+<h2>Send a message</h2>
+<form method="post" action="{{ url_for('contact') }}" class="card" style="max-width:640px;">
+  {{ csrf_field() }}
+  <div class="field">
+    <label>What is it about?</label>
+    <select name="category">
+      {% for key, label in categories %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label>Your name (optional)</label>
+      <input type="text" name="name" maxlength="100" value="{{ prefill_name }}">
+    </div>
+    <div class="field">
+      <label>Your email (so a reply can reach you)</label>
+      <input type="email" name="email" maxlength="200">
+    </div>
+  </div>
+  <div class="field">
+    <label>Message</label>
+    <textarea name="message" rows="7" maxlength="{{ max_len }}" required
+      placeholder="For a problem: what you did, what you expected, and what happened instead."></textarea>
+    <div class="small muted">Software version {{ version }}. Please don't put passwords in a message.</div>
+  </div>
+  <div style="position:absolute; left:-5000px;" aria-hidden="true">
+    <label>Leave this empty</label>
+    <input type="text" name="website_url" tabindex="-1" autocomplete="off">
+  </div>
+  <button class="btn" type="submit">Send message</button>
+</form>
+<p class="muted small">For a quick rating of the tool, use <a href="{{ url_for('feedback') }}">Feedback</a> (signed-in users).</p>
+{% endblock %}

@@ -1,0 +1,21 @@
+# Run the library with Docker Compose from the folder that holds the Dockerfile:
+#   cp deploy/lab.env.example deploy/lab.env     (then edit lab.env)
+#   docker compose -f deploy/docker-compose.yml up -d --build
+# Everything the app writes lives in the named volume "mdl-data".
+# Built and started by the GitHub Actions workflow (.github/workflows/tests.yml).
+services:
+  mdl:
+    build: ..
+    image: microbial-digital-library:4.7.1
+    container_name: mdl
+    restart: unless-stopped
+    env_file: lab.env
+    environment:
+      APP_DATA_DIR: /data
+    volumes:
+      - mdl-data:/data
+    ports:
+      # Bound to this machine only. Put the HTTPS reverse proxy in front of it.
+      - "127.0.0.1:8000:8000"
+volumes:
+  mdl-data:

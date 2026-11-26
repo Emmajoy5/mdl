@@ -1,0 +1,24 @@
+{# Inputs for this lab's custom fields. `custom` is a list of dicts with
+   field_id, name, field_type, choices, value (see custom_inputs() in app.py). #}
+{% if custom %}
+<h2>Additional details</h2>
+<div class="field-row">
+  {% for f in custom %}
+  <div class="field">
+    <label>{{ f.name }}</label>
+    {% if f.field_type == 'choice' %}
+    <select name="cf_{{ f.field_id }}">
+      <option value="">None</option>
+      {% for c in f.choices %}<option value="{{ c }}" {{ 'selected' if f.value == c else '' }}>{{ c }}</option>{% endfor %}
+    </select>
+    {% elif f.field_type == 'number' %}
+    <input type="text" inputmode="decimal" name="cf_{{ f.field_id }}" value="{{ f.value or '' }}">
+    {% elif f.field_type == 'date' %}
+    <input type="text" class="date-input" name="cf_{{ f.field_id }}" value="{{ f.value or '' }}" placeholder="YYYY-MM-DD">
+    {% else %}
+    <input type="text" name="cf_{{ f.field_id }}" value="{{ f.value or '' }}" maxlength="500">
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

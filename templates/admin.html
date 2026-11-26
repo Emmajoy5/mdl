@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% block title %}Admin | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Admin</h1>
+<p class="muted">Manage accounts, join requests, the source-labs list and messages, and download the full
+  data export. Everyone, including regular users, can add and edit strain records and void entries.</p>
+
+<h2>Lab name</h2>
+<div class="card">
+  <p class="muted" style="margin-top:0;">Shown at the top of every page and on printed labels.</p>
+  <form method="post" action="{{ url_for('admin_rename_tenant') }}" style="display:flex; gap:10px; align-items:end;">
+    {{ csrf_field() }}
+    <div class="field" style="margin-bottom:0;">
+      <label>Lab name</label>
+      <input type="text" name="name" value="{{ tenant.name if tenant else '' }}" required>
+    </div>
+    <button class="btn" type="submit">Save</button>
+  </form>
+</div>
+
+<h2 id="photo-storage">Photo storage</h2>
+<div class="card">
+  <p class="muted" style="margin-top:0;">Phone photos are often 3 to 15 MB. By default, large photos are turned the
+    right way up and saved as high-quality JPEGs, at most 4096 pixels on the long side, with full colour detail.
+    A 12 megapixel photo takes about 40% of the space and a 48 megapixel one about a tenth, with no visible
+    difference; in tests the plate analysis read the same colony coverage. The phone's location data is removed.
+    Photos already stored are not changed (the server command <code>manage.py compact-photos</code> does that).</p>
+  <form method="post" action="{{ url_for('admin_photo_storage') }}">
+    {{ csrf_field() }}
+    <label style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <input type="radio" name="keep_original_photos" value="0" {% if not (tenant and tenant.keep_original_photos) %}checked{% endif %}>
+      Save space (recommended)
+    </label>
+    <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">
+      <input type="radio" name="keep_original_photos" value="1" {% if tenant and tenant.keep_original_photos %}checked{% endif %}>
+      Keep every photo exactly as uploaded (uses more space)
+    </label>
+    <button class="btn" type="submit">Save</button>
+  </form>
+</div>
+
+{% if pending %}
+<h2>Join requests <span class="badge b-warn">{{ pending|length }}</span></h2>
+<div class="card">
+  <p class="muted" style="margin-top:0;">These people entered your lab's join code. They can't log in or see any data
+    until you approve them. If you don't recognise someone, decline them.</p>
+  <table>
+    <thead><tr><th>Username</th><th>Full name</th><th></th></tr></thead>
+    <tbody>
+      {% for u in pending %}
+      <tr>
+        <td>{{ u.username }}</td><td>{{ u.full_name or '' }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin_join_request', user_id=u.user_id, action='approve') }}" style="display:inline;">
+            {{ csrf_field() }}<button class="btn small" type="submit">Approve</button>
+          </form>
+          <form method="post" action="{{ url_for('admin_join_request', user_id=u.user_id, action='decline') }}" style="display:inline;"
+                onsubmit="return confirm('Decline this request?');">
+            {{ csrf_field() }}<button class="btn secondary small" type="submit">Decline</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% set pw_requests = password_help_requests() %}
+{% if pw_requests %}
+<h2>Password help <span class="badge b-warn">{{ pw_requests|length }}</span></h2>
+<div class="card">
+  <p class="muted" style="margin-top:0;">These people asked for help with a forgotten password. Check it is really them,
+    then make a reset link and give it to them in person or by a message only they can read. You never see their new password.</p>
+  <table>
+    <thead><tr><th>Username</th><th>Full name</th><th>Asked</th><th></th></tr></thead>
+    <tbody>
+      {% for r in pw_requests %}
+      <tr>
+        <td>{{ r.username }}</td><td>{{ r.full_name or '' }}</td><td>{{ r.requested_at.replace('T', ' ') }}</td>
+        <td>
+          <form method="post" action="{{ url_for('pwreset.admin_link', user_id=r.user_id) }}" style="display:inline;">
+            {{ csrf_field() }}<button class="btn small" type="submit">Make reset link</button>
+          </form>
+          <form method="post" action="{{ url_for('pwreset.admin_dismiss', request_id=r.request_id) }}" style="display:inline;">
+            {{ csrf_field() }}<button class="btn secondary small" type="submit">Dismiss</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<h2>Join code</h2>
+<div class="card">
+  <p class="muted" style="margin-top:0;">Give this code to colleagues who should have an account. They enter it
+    on the <a href="{{ url_for('signup') }}">Ask to join</a> page and choose a login, which works once you approve
+    it under Join requests above. You can also create accounts yourself under Users below.</p>
+  <p style="font-size:1.6em; letter-spacing:.15em; font-weight:700; margin:8px 0;">{{ join_code }}</p>
+  <form method="post" action="{{ url_for('admin_regenerate_join_code') }}"
+        onsubmit="return confirm('Make a new code? The current one will stop working.');">
+    {{ csrf_field() }}
+    <button class="btn secondary" type="submit">Make a new code</button>
+  </form>
+</div>
+
+<h2>Export</h2>
+<div class="card">
+  <p class="muted" style="margin-top:0;">A full copy of the catalog, any time. Account passwords are
+    never included in either export.</p>
+  <a class="btn" href="{{ url_for('export') }}">Download ZIP (CSVs)</a>
+  <a class="btn secondary" href="{{ url_for('export_xlsx') }}">Download Excel profile (.xlsx)</a>
+</div>
+
+<h2>Import</h2>
+<div class="card">
+  <p class="muted" style="margin-top:0;">Already have a strain list in Excel or CSV? Import it in one go
+    instead of adding strains one at a time. You'll preview everything before anything is added.</p>
+  <a class="btn" href="{{ url_for('admin_import') }}">Import strains from a file</a>
+</div>
+
+<h2>Custom fields</h2>
+<div class="card">
+  <p class="muted" style="margin-top:0;">Track anything your lab needs beyond the standard fields, such as
+    isolation source, biosafety level, batch number, supplier lot. Each field you add appears on every
+    strain's add and edit form and on its page.</p>
+  {% if custom_fields %}
+  <table>
+    <thead><tr><th>Field</th><th>Type</th><th>Options</th><th></th></tr></thead>
+    <tbody>
+      {% for f in custom_fields %}
+      <tr>
+        <td>{{ f.name }}</td><td>{{ f.field_type }}</td><td class="muted">{{ f.choices|join(', ') }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin_delete_field', field_id=f.field_id) }}" style="display:inline;"
+                onsubmit="return confirm('Remove this field and every value recorded for it?');">
+            {{ csrf_field() }}
+            <button class="btn secondary small" type="submit">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <form method="post" action="{{ url_for('admin_add_field') }}" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-top:12px;">
+    {{ csrf_field() }}
+    <div class="field" style="margin-bottom:0;"><label>Field name</label><input type="text" name="name" maxlength="60" required placeholder="e.g. Biosafety level"></div>
+    <div class="field" style="margin-bottom:0;"><label>Type</label>
+      <select name="field_type">
+        <option value="text">Text</option><option value="number">Number</option>
+        <option value="date">Date</option><option value="choice">Pick from a list</option>
+      </select></div>
+    <div class="field" style="margin-bottom:0;"><label>List options (for "pick from a list")</label>
+      <input type="text" name="choices" placeholder="BSL-1, BSL-2"></div>
+    <button class="btn" type="submit">Add field</button>
+  </form>
+</div>
+
+<h2>Users</h2>
+<div class="card">
+  <table>
+    <thead><tr><th>Username</th><th>Full name</th><th>Role</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td>{{ u.username }}</td>
+        <td>{{ u.full_name or '' }}</td>
+        <td>{{ u.role }}</td>
+        <td>
+          {% if u.is_active %}<span class="badge b-good">active</span>
+          {% else %}<span class="badge b-muted">deactivated</span>{% endif %}
+        </td>
+        <td>
+          <form method="post" action="{{ url_for('admin_toggle_user', user_id=u.user_id) }}" style="display:inline;">
+            {{ csrf_field() }}
+            <button class="btn secondary small" type="submit">{{ 'Deactivate' if u.is_active else 'Reactivate' }}</button>
+          </form>
+          {% if u.is_active and u.user_id != current_user().user_id %}
+          <form method="post" action="{{ url_for('pwreset.admin_link', user_id=u.user_id) }}" style="display:inline;">
+            {{ csrf_field() }}<button class="btn secondary small" type="submit">Make reset link</button>
+          </form>
+          {% endif %}
+          <button class="btn secondary small" type="button" onclick="document.getElementById('reset-{{ u.user_id }}').style.display='flex';">Set password</button>
+          <form id="reset-{{ u.user_id }}" method="post" action="{{ url_for('admin_reset_password', user_id=u.user_id) }}"
+                style="display:none; gap:6px; margin-top:6px;">
+            {{ csrf_field() }}
+            <input type="password" name="password" placeholder="New password" required style="padding:5px 9px; font-size:12.5px;">
+            <button class="btn small" type="submit">Set</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <p class="muted small" style="margin:10px 0 0;">A reset link lets the person choose their own password, so nobody else
+    knows it. "Set password" is for when they are with you and cannot use a link.</p>
+  {% set resets = recent_password_resets() %}
+  {% if resets %}
+  <h3 style="margin-top:22px; font-size:14px;">Recent password resets</h3>
+  <table>
+    <thead><tr><th>Account</th><th>How</th><th>When</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for r in resets %}
+      <tr><td>{{ r.username }}</td><td>{{ r.how }}</td><td>{{ r.created_at }}</td>
+        <td><span class="badge {{ 'b-good' if r.state == 'used' else ('b-warn' if r.state == 'waiting' else 'b-muted') }}">{{ r.state }}</span></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  <h3 style="margin-top:22px; font-size:14px;">Add an account</h3>
+  <form method="post" action="{{ url_for('admin_add_user') }}" class="field-row">
+    {{ csrf_field() }}
+    <div class="field">
+      <label>Username</label>
+      <input type="text" name="username" required>
+    </div>
+    <div class="field">
+      <label>Full name</label>
+      <input type="text" name="full_name">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" name="password" required>
+    </div>
+    <div class="field">
+      <label>Role</label>
+      <select name="role">
+        {% for r in role_choices %}<option value="{{ r }}" {% if r=='user' %}selected{% endif %}>{{ r }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field" style="align-self:end;">
+      <button class="btn" type="submit">Add account</button>
+    </div>
+  </form>
+</div>
+
+<h2>Source labs</h2>
+<div class="card">
+  <p class="muted" style="margin-top:0;">The dropdown offered on "Add strain" / "Edit strain" when
+    a sample's source is Lab. This is different from your own lab's account above: it is just
+    where a physical sample came from.</p>
+  <table>
+    <thead><tr><th>Source lab name</th><th></th></tr></thead>
+    <tbody>
+      {% for lab in labs %}
+      <tr>
+        <td>{{ lab.name }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin_delete_lab', lab_id=lab.lab_id) }}" style="display:inline;"
+                onsubmit="return confirm('Remove this source lab from the dropdown? Strains already recorded against it keep showing its name.');">
+            {{ csrf_field() }}
+            <button class="btn secondary small" type="submit">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="2" class="muted">No source labs added yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:22px; font-size:14px;">Add a source lab</h3>
+  <form method="post" action="{{ url_for('admin_add_lab') }}" style="display:flex; gap:10px; align-items:end;">
+    {{ csrf_field() }}
+    <div class="field" style="margin-bottom:0;">
+      <label>Source lab name</label>
+      <input type="text" name="name" required>
+    </div>
+    <button class="btn" type="submit">Add source lab</button>
+  </form>
+</div>
+<h2 id="messages">Messages {% if unread_messages %}<span class="badge b-warn">{{ unread_messages }} new</span>{% endif %}</h2>
+<div class="card">
+  <p class="muted" style="margin-top:0;">Sent from the <a href="{{ url_for('contact') }}">Contact page</a>.
+    Reply by email if the sender left an address.</p>
+  {% for m in messages %}
+  <div style="border-top:1px solid var(--line); padding:12px 0;{% if m.is_read %} opacity:.65;{% endif %}">
+    <div class="small">
+      <strong>{{ category_labels.get(m.category, m.category) }}</strong>
+      {% if not m.is_read %}<span class="badge b-warn">new</span>{% endif %}
+      <span class="muted">&middot; {{ m.created_at }}
+        &middot; {{ m.name or 'No name given' }}{% if m.email %} &lt;{{ m.email }}&gt;{% endif %}
+        {% if m.username %}&middot; signed in as {{ m.username }}{% else %}&middot; not signed in{% endif %}</span>
+    </div>
+    <p style="white-space:pre-wrap; margin:6px 0 8px;">{{ m.message }}</p>
+    <form method="post" action="{{ url_for('admin_message_action', message_id=m.message_id, action='unread' if m.is_read else 'read') }}" style="display:inline;">
+      {{ csrf_field() }}<button class="btn secondary small" type="submit">{{ 'Mark as new' if m.is_read else 'Mark as read' }}</button>
+    </form>
+    <form method="post" action="{{ url_for('admin_message_action', message_id=m.message_id, action='delete') }}" style="display:inline;"
+          onsubmit="return confirm('Delete this message?');">
+      {{ csrf_field() }}<button class="btn secondary small" type="submit">Delete</button>
+    </form>
+  </div>
+  {% else %}
+  <p class="muted" style="margin:0;">No messages yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

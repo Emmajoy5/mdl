@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Forgot your password? | Microbial Digital Library{% endblock %}
+{% block content %}
+<h1>Forgot your password?</h1>
+{% if sent %}
+<div class="card" style="max-width:560px;">
+  <p style="margin-top:0;">Thank you. If an account matches what you entered, one of two things has happened:</p>
+  <ul>
+    <li>if the account has an email address and this server sends email, a reset link is on its way. It works once,
+      for 60 minutes;</li>
+    <li>otherwise, your lab's administrators have been asked to help. They will give you a reset link, in person or
+      by a message only you can read.</li>
+  </ul>
+  <p>If nothing arrives, speak to your lab administrator.</p>
+  <p class="muted small" style="margin-bottom:0;">If you are the lab's only administrator, whoever runs the server
+    can make you a link with <code>python manage.py reset-link USERNAME</code>.</p>
+</div>
+<p><a href="{{ url_for('login') }}">Back to log in</a></p>
+{% else %}
+<p class="muted">Enter your username, or the email address saved on your account.</p>
+<form method="post" action="{{ url_for('pwreset.forgot') }}" class="card" style="max-width:420px;">
+  {{ csrf_field() }}
+  <div class="field">
+    <label for="username">Username or email address</label>
+    <input id="username" type="text" name="username" autocomplete="username" autofocus required maxlength="200">
+  </div>
+  <button class="btn" type="submit">Ask for a reset link</button>
+</form>
+<p class="muted small" style="max-width:560px;">Your administrator never sees your new password: they make a link,
+  and you choose the password yourself.</p>
+<p><a href="{{ url_for('login') }}">Back to log in</a></p>
+{% endif %}
+{% endblock %}

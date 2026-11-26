@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Microbial Digital Library</title>
+<meta name="description" content="A free, open-source culture collection manager for brewing and applied microbiology labs. Freezer positions, revival dates, plate photos and 3D plate views, on your own computer.">
+<meta property="og:title" content="Microbial Digital Library">
+<meta property="og:description" content="Know where every strain is and when it is due. Free, open-source culture collection manager that runs on your own computer.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://emmajoy5.github.io/MDL/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="preload" href="assets/fonts/source-serif-4-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:"Source Serif 4";font-weight:400;font-style:normal;font-display:swap;src:url(assets/fonts/source-serif-4-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Source Serif 4";font-weight:600;font-style:normal;font-display:swap;src:url(assets/fonts/source-serif-4-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Source Serif 4";font-weight:700;font-style:normal;font-display:swap;src:url(assets/fonts/source-serif-4-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"Source Sans 3";font-weight:400;font-style:normal;font-display:swap;src:url(assets/fonts/source-sans-3-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Source Sans 3";font-weight:600;font-style:normal;font-display:swap;src:url(assets/fonts/source-sans-3-latin-600-normal.woff2) format("woff2")}
+
+:root{
+  --frost:#f5f8fa; --paper:#ffffff; --ink:#14212b; --soft:#4b5b68; --line:#d8e1e6;
+  --teal:#0e7490; --teal-deep:#0b5c73; --agar:#a8541a; --night:#0a0e17; --night-2:#1d2a40;
+  --ok:#2f7d4f; --soon:#b97a00; --late:#c23b30;
+  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --sans:"Source Sans 3",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:18px;line-height:1.6;-webkit-font-smoothing:antialiased}
+img,video{max-width:100%;height:auto;display:block}
+a{color:var(--teal-deep);text-underline-offset:3px}
+a:hover{color:var(--agar)}
+:focus-visible{outline:3px solid var(--agar);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:var(--serif);font-weight:700;line-height:1.12;letter-spacing:-.012em;margin:0}
+h1{font-size:clamp(2.4rem,5.4vw,4rem)}
+h2{font-size:clamp(1.8rem,3.4vw,2.5rem)}
+h3{font-size:1.45rem;font-weight:600}
+p{margin:0 0 1em;max-width:62ch}
+.soft{color:var(--soft)}
+
+/* header */
+header.site{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+header.site .wrap{display:flex;align-items:center;gap:24px;min-height:64px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;font-family:var(--serif);font-weight:700;font-size:1.1rem;color:var(--ink);text-decoration:none}
+.brand img{height:34px;width:auto}
+header.site nav{margin-left:auto;display:flex;gap:22px;flex-wrap:wrap;font-size:.98rem}
+header.site nav a{color:var(--soft);text-decoration:none;padding:6px 0}
+header.site nav a:hover{color:var(--ink);text-decoration:underline}
+
+/* hero */
+.hero{padding:64px 0 72px;background:linear-gradient(180deg,var(--frost),var(--paper))}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:56px;align-items:center}
+.hero .lead{font-size:1.25rem;color:var(--soft);margin:22px 0 30px;max-width:46ch}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-block;padding:13px 22px;border-radius:8px;font-weight:600;text-decoration:none;font-size:1rem;border:1.5px solid var(--teal);transition:background .15s,color .15s}
+.btn.primary{background:var(--teal);color:#fff}
+.btn.primary:hover{background:var(--teal-deep);color:#fff}
+.btn.ghost{color:var(--teal-deep);background:transparent}
+.btn.ghost:hover{background:var(--teal);color:#fff}
+
+/* freezer box */
+.fbox{background:#e9f0f3;border:1px solid var(--line);border-radius:18px;padding:22px 22px 18px}
+.fbox .grid{display:grid;grid-template-columns:22px repeat(6,1fr);gap:8px;align-items:center}
+.fbox .ax{font-size:.78rem;color:var(--soft);text-align:center}
+.vial{aspect-ratio:1;width:100%;border-radius:50%;border:2px solid #b8c7cf;background:#f7fafb;padding:0;cursor:pointer;position:relative;display:block}
+.vial.empty{cursor:default;border-style:dashed;border-color:#c9d6dc;background:transparent}
+.vial .cap{position:absolute;inset:22%;border-radius:50%}
+.vial.ok .cap{background:var(--ok)} .vial.soon .cap{background:var(--soon)} .vial.late .cap{background:var(--late)}
+.vial[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 3px #fff,0 0 0 5px var(--ink)}
+.vial:not(.empty):hover{border-color:var(--ink)}
+.tube-label{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-height:132px}
+.tube-label .nm{font-family:var(--serif);font-style:italic;font-weight:600;font-size:1.2rem;line-height:1.25}
+.tube-label dl{margin:8px 0 0;display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-size:.95rem}
+.tube-label dt{color:var(--soft)} .tube-label dd{margin:0}
+.badge{display:inline-block;font-size:.85rem;font-weight:600;padding:1px 10px;border-radius:999px}
+.badge.ok{background:#e1f1e8;color:var(--ok)} .badge.soon{background:#faedcc;color:#8a5a00} .badge.late{background:#f8dcd9;color:var(--late)}
+.fbox .cap-note{margin:12px 2px 0;font-size:.88rem;color:var(--soft);max-width:none}
+.key{display:flex;gap:16px;flex-wrap:wrap;margin:12px 2px 0;font-size:.85rem;color:var(--soft)}
+.key i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+
+/* sections */
+section{padding:84px 0}
+section.tint{background:var(--frost)}
+.sec-head{margin-bottom:40px}
+.sec-head p{font-size:1.15rem;color:var(--soft);margin-top:14px}
+
+/* tour */
+#tour{background:var(--night);color:#e6ebf5;background-image:radial-gradient(900px 500px at 15% 0%,var(--night-2),transparent 70%)}
+#tour h2{color:#fff}
+#tour .grid{display:grid;grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr);gap:48px;align-items:center}
+#tour p{color:#aab6c9}
+.chapters{list-style:none;margin:26px 0 0;padding:0;display:grid;gap:2px}
+.chapters button{all:unset;box-sizing:border-box;width:100%;cursor:pointer;display:flex;gap:16px;padding:10px 12px;border-radius:8px;color:#d4dcec;font-size:1.02rem}
+.chapters button:hover{background:rgba(255,255,255,.07);color:#fff}
+.chapters button:focus-visible{outline:3px solid #f0b46a}
+.chapters .t{font-variant-numeric:tabular-nums;color:#7fd0e8;min-width:2.6em}
+.vwrap{border-radius:14px;overflow:hidden;background:#000;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+video{width:100%;aspect-ratio:16/9;background:#000}
+
+/* features */
+.feat{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:56px;align-items:center;padding:34px 0}
+.feat.flip{grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr)}
+.feat.flip .txt{order:2}
+.feat h3{margin-bottom:12px}
+.feat ul{margin:12px 0 0;padding-left:1.1em;color:var(--soft);max-width:56ch}
+.feat li{margin:4px 0}
+.shot{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 8px 30px rgba(20,33,43,.08)}
+.shot.dark{border-color:#1d2a40}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.shot figcaption{font-size:.85rem;color:var(--soft);padding:8px 12px;border-top:1px solid var(--line);background:#fff}
+figure{margin:0}
+.more{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 56px;margin-top:30px}
+.more h3{font-size:1.2rem;margin-bottom:6px}
+.more p{color:var(--soft);margin:0}
+
+/* tested */
+table.tested{width:100%;border-collapse:collapse;font-size:1.02rem}
+table.tested th,table.tested td{text-align:left;vertical-align:top;padding:14px 16px;border-top:1px solid var(--line)}
+table.tested tr:last-child td,table.tested tr:last-child th{border-bottom:1px solid var(--line)}
+table.tested th{width:26%;font-weight:600;font-family:var(--serif);font-size:1.08rem}
+.note{margin-top:22px;padding:16px 20px;border-left:4px solid var(--agar);background:#fbf3ec;max-width:78ch;border-radius:0 8px 8px 0}
+
+/* privacy */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:56px}
+.two h3{margin-bottom:10px}
+
+/* faq */
+details{border-top:1px solid var(--line);padding:4px 0}
+details:last-of-type{border-bottom:1px solid var(--line)}
+summary{cursor:pointer;list-style:none;padding:16px 36px 16px 0;font-family:var(--serif);font-weight:600;font-size:1.2rem;position:relative}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";position:absolute;right:6px;top:12px;font-size:1.5rem;font-weight:400;color:var(--teal)}
+details[open] summary::after{content:"\2212"}
+details p{padding-bottom:12px;color:var(--soft)}
+
+footer{background:var(--night);color:#aab6c9;padding:48px 0;font-size:.95rem}
+footer a{color:#7fd0e8}
+footer .wrap{display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start;justify-content:space-between}
+footer p{margin:0 0 6px;max-width:60ch}
+[hidden]{display:none!important}
+
+@media (max-width:900px){
+  .hero .wrap,#tour .grid,.feat,.feat.flip,.two{grid-template-columns:1fr;gap:34px}
+  .feat.flip .txt{order:0}
+  .more{grid-template-columns:1fr}
+  section{padding:60px 0}
+  .hero{padding:40px 0 48px}
+  table.tested th{width:auto;display:block;border-bottom:0;padding-bottom:0}
+  table.tested td{display:block;border-top:0;padding-top:4px}
+}
+@media (max-width:520px){
+  body{font-size:17px}
+  header.site nav{gap:14px;font-size:.92rem}
+  .fbox{padding:14px}
+  .fbox .grid{gap:5px;grid-template-columns:16px repeat(6,1fr)}
+  .pair{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="assets/logo.png" alt="">Microbial Digital Library</a>
+    <nav aria-label="Page sections">
+      <a href="#tour">Tour</a><a href="#features">Features</a><a href="#tested">Tested</a><a href="#privacy">Privacy</a><a href="#faq">Questions</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero" aria-labelledby="h-hero" style="padding-top:64px">
+  <div class="wrap">
+    <div>
+      <h1 id="h-hero">Know where every strain is and when it is due.</h1>
+      <p class="lead">Microbial Digital Library keeps a brewing lab's working culture collection in one searchable place: freezer positions, revival dates, plate photographs and 3D plate views. It is free, open source and runs on your own computer.</p>
+      <div class="btns">
+        <a class="btn primary" href="#tour">Watch the 80 second tour</a>
+        <a class="btn ghost" href="#features">See what it does</a>
+        <a class="btn ghost" id="cta-contact" href="#" hidden>Get in touch</a>
+      </div>
+    </div>
+
+    <div class="fbox" aria-label="Example freezer box">
+      <div class="grid" id="boxgrid" role="group" aria-label="Freezer box, 6 by 6 positions. Choose a vial to see its record."></div>
+      <div class="tube-label" id="tube" aria-live="polite"></div>
+      <div class="key"><span><i style="background:var(--ok)"></i>not due</span><span><i style="background:var(--soon)"></i>due within 5 days</span><span><i style="background:var(--late)"></i>due today or overdue</span></div>
+      <p class="cap-note">Example strains. Select a vial to see its record.</p>
+    </div>
+  </div>
+</section>
+
+<section id="tour" aria-labelledby="h-tour">
+  <div class="wrap grid">
+    <div>
+      <h2 id="h-tour">The whole tool in 80 seconds</h2>
+      <p style="margin-top:16px">Captions carry the story, so it works with the sound off. Jump to any part:</p>
+      <ul class="chapters" id="chapters">
+        <li><button data-t="9"><span class="t">0:09</span>See what needs reviving today</button></li>
+        <li><button data-t="15"><span class="t">0:15</span>Log a revival check</button></li>
+        <li><button data-t="26"><span class="t">0:26</span>Add a strain with its freezer position</button></li>
+        <li><button data-t="42"><span class="t">0:42</span>Keep plate photos with their conditions</button></li>
+        <li><button data-t="47"><span class="t">0:47</span>Turn the 3D plate</button></li>
+        <li><button data-t="53"><span class="t">0:53</span>Print QR labels</button></li>
+        <li><button data-t="57"><span class="t">0:57</span>Open it on a phone</button></li>
+        <li><button data-t="62"><span class="t">1:02</span>Search and the storage map</button></li>
+        <li><button data-t="70"><span class="t">1:10</span>Import a spreadsheet, export everything</button></li>
+      </ul>
+    </div>
+    <div class="vwrap">
+      <video id="tourvid" controls preload="metadata" poster="assets/tour-poster.jpg" playsinline>
+        <source src="assets/tour.mp4" type="video/mp4">
+        Your browser cannot play this video. <a href="assets/tour.mp4">Download the tour</a>.
+      </video>
+    </div>
+  </div>
+</section>
+
+<section id="features" aria-labelledby="h-feat">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-feat">What it does for a working lab</h2>
+      <p>Built around the questions a bench scientist actually asks: where is it, is it still good, and what did we do to it last.</p>
+    </div>
+
+    <div class="feat">
+      <div class="txt">
+        <h3>Every vial has an address</h3>
+        <p class="soft">Freezer and box are required for every new strain, with rack and position optional. The storage map lists each box, warns when two vials claim the same spot, and lists strains that still have no location.</p>
+      </div>
+      <figure class="shot"><img src="assets/shot-storage.webp" alt="Storage map listing strains by freezer, box and position" loading="lazy" width="1200" height="768"></figure>
+    </div>
+
+    <div class="feat flip">
+      <div class="txt">
+        <h3>Revival dates that warn you early</h3>
+        <p class="soft">Set a revival interval and the landing page lists strains that are due or overdue, with an amber warning five days ahead. Each check is dated and carries the name of the person who logged it. A failed revival keeps the strain in red until a successful check is recorded.</p>
+      </div>
+      <figure class="shot"><img src="assets/shot-home.webp" alt="Landing page with strains needing revival highlighted" loading="lazy" width="1200" height="806"></figure>
+    </div>
+
+    <div class="feat">
+      <div class="txt">
+        <h3>See the plate in 3D</h3>
+        <p class="soft">Every strain gets a plate built from its record, with colonies at their typical size and shape: smooth domes, bead-like heaps or branching arms. Upload a photograph of your own plate and it becomes a detailed relief of that exact dish, with each colony raised from the agar and the agar keeping its colour from the photo.</p>
+        <p class="soft">Turn it, zoom in, switch between a dark and a white background, or download it as an STL file for 3D printing. The printed plate matches the one on screen.</p>
+      </div>
+      <div class="pair">
+        <figure class="shot dark"><img src="assets/3d-colony.webp" alt="3D plate of Bacillus subtilis built from its record, with rosette colonies on amber agar" loading="lazy" width="1080" height="780"><figcaption><i>Bacillus subtilis</i>, built from its record</figcaption></figure>
+        <figure class="shot"><img src="assets/3d-photo.webp" alt="3D relief of a wrinkled Bacillus subtilis plate built from a photograph" loading="lazy" width="1080" height="780"><figcaption>The same strain, built from a plate photo</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="feat flip">
+      <div class="txt">
+        <h3>Bring your spreadsheet</h3>
+        <p class="soft">Upload an Excel or CSV list with your own column names. You see a preview first, rows with problems are listed by row number, and strains already in the catalogue are flagged so nothing is added twice.</p>
+      </div>
+      <figure class="shot"><img src="assets/shot-import.webp" alt="Import preview showing matched columns and rows ready to import" loading="lazy" width="1200" height="937"></figure>
+    </div>
+
+    <div class="more">
+      <div><h3>QR labels for vials</h3><p>Print labels with a QR code that opens the strain's record on any phone, plus its ID, name and storage position.</p></div>
+      <div><h3>Works on phones and tablets</h3><p>Scan a code on the Connect page and use the same live library on your own device. No app store, nothing to install.</p></div>
+      <div><h3>One lab, one installation</h3><p>Each lab runs its own copy on its own computer or server. New colleagues ask to join with the lab's code, and a lab admin approves them.</p></div>
+      <div><h3>Your data, always exportable</h3><p>A lab administrator can download a ZIP of plain CSV files with everything in the lab's catalogue.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="tested" class="tint" aria-labelledby="h-tested">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2 id="h-tested">What has been tested</h2>
+      <p>Results from the project's own test suite, which runs on Linux, Windows and macOS.</p>
+    </div>
+    <table class="tested">
+      <tbody>
+        <tr><th scope="row">Automated checks</th><td>591 checks pass on a clean installation of version 4.7.0, run automatically on every change.</td></tr>
+        <tr><th scope="row">Accounts</th><td>Only accounts a lab admin has created or approved can sign in. First-time setup needs a one-time code from the server, so nobody else on the network can claim the lab.</td></tr>
+        <tr><th scope="row">Spreadsheet import</th><td>A 5,000-row file imported in about one second, with row-level error and duplicate reports.</td></tr>
+        <tr><th scope="row">Large catalogue</th><td>A catalogue of 5,000 strains listed in about 0.25 seconds.</td></tr>
+        <tr><th scope="row">Revival dates</th><td>Green, amber and red status were checked for not due, due within five days, due today and overdue, and for a failed revival or a strain with no start date.</td></tr>
+        <tr><th scope="row">Upgrades</th><td>Databases from five earlier releases upgraded automatically, and exported catalogues imported again without errors.</td></tr>
+        <tr><th scope="row">Plate photographs</th><td>Colony reading picks out small colonies on a counting grid, translucent colonies and wrinkled growth, and leaves grid lines, marker writing and printed labels out of the count. It was checked on real plates, including one held in a gloved hand. If the background is uneven the page says so, and you can mark a patch of bare agar yourself.</td></tr>
+        <tr><th scope="row">Record history</th><td>Entries are voided with a reason instead of deleted, and every change is kept in an audit log.</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Next steps are an independent security review and a study with working labs. Labs doing GLP or GMP work should check the tool against their own quality rules before relying on it.</p>
+  </div>
+</section>
+
+<section id="privacy" aria-labelledby="h-priv">
+  <div class="wrap">
+    <div class="sec-head"><h2 id="h-priv">Your data stays with you</h2></div>
+    <div class="two">
+      <div>
+        <h3>Where it lives</h3>
+        <p class="soft">The library runs on a computer or server that you or your organisation control. Strain records, photographs and models are stored there, in one data folder that is easy to back up. The authors never receive your data, and the site you are reading has no sign-in and holds none.</p>
+        <p class="soft">Nothing needs an internet connection beyond your own network. Optional AI helpers are off unless the lab adds its own key.</p>
+      </div>
+      <div>
+        <h3>Who is responsible</h3>
+        <p class="soft">Whoever runs an installation is responsible for its security, backups and the people it gives access to. Anyone who can reach the server can open its files, so keep it where only trusted people have access. The software is shared under the MIT licence, as it is, without warranty.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="tint" aria-labelledby="h-faq">
+  <div class="wrap" style="max-width:860px">
+    <div class="sec-head"><h2 id="h-faq">Questions</h2></div>
+    <details><summary>Is it free?</summary><p>Yes. It is released under the MIT licence, so labs can use, change and share it at no charge. The code will be published on GitHub, with each release archived on Zenodo under a citable DOI.</p></details>
+    <details><summary>Can I try it now?</summary><p>Watch the tour above to see every main screen. A public demo with example strains and plate photographs is on the way. It will reset itself every few hours, so nothing entered there is kept. <span data-needs="contactEmail" hidden>Write to us if your lab would like to be an early user.</span></p></details>
+    <details><summary>What does it run on?</summary><p>Python on Windows, Mac or Linux, with a web browser on any device on the same network. A Docker setup is included and is built by the automated tests on every change.</p></details>
+    <details><summary>Can several people use it?</summary><p>Yes. Each person has their own account, and everyone works on the same live catalogue from their own computer, tablet or phone. One installation holds one lab. A second lab sets up its own installation and keeps its data to itself.</p></details>
+    <details><summary>Is it suitable for regulated work?</summary><p>Every entry is dated and tied to the account that made it. Nothing is deleted: entries are voided with a reason, and every change goes into an audit log. Electronic signatures and formal GLP or GMP validation are not part of this release, so check with your quality team before using it for regulated records.</p></details>
+    <details><summary>How do I cite it?</summary><p>A paper describing the tool is in preparation. Until it is published, please cite the software release; its DOI will appear here once version 4.7.0 is archived on Zenodo.</p></details>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>
+      <p><strong style="color:#fff;font-family:var(--serif);font-size:1.1rem">Microbial Digital Library</strong></p>
+      <p>Free, open-source culture collection manager. MIT licence, provided without warranty.</p>
+    </div>
+    <div>
+      <p data-needs="contactEmail" hidden>Contact: <a id="f-contact" href="#"></a></p>
+      <p data-needs="paperUrl" hidden><a id="f-paper" href="#">Read the paper</a></p>
+      <p data-needs="repoUrl" hidden><a id="f-repo" href="#">Get the code</a></p>
+      <p>Sister tool for research groups: <a href="https://emmajoy5.github.io/BenchStock/">BenchStock</a></p>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* Fill these in to show contact, paper and code links. Anything left empty stays hidden. */
+const SITE = {
+  contactEmail: "",   // e.g. "name@institution.ac.uk"
+  paperUrl: "",       // link to the published paper
+  repoUrl: ""         // link to the public code repository
+};
+
+(function () {
+  /* optional links */
+  document.querySelectorAll("[data-needs]").forEach(function (el) {
+    if (SITE[el.dataset.needs]) el.hidden = false;
+  });
+  if (SITE.contactEmail) {
+    var m = "mailto:" + SITE.contactEmail;
+    var c = document.getElementById("cta-contact"); c.href = m; c.hidden = false;
+    var f = document.getElementById("f-contact"); f.href = m; f.textContent = SITE.contactEmail;
+  }
+  if (SITE.paperUrl) document.getElementById("f-paper").href = SITE.paperUrl;
+  if (SITE.repoUrl) document.getElementById("f-repo").href = SITE.repoUrl;
+
+  /* tour chapters */
+  var vid = document.getElementById("tourvid");
+  document.querySelectorAll("#chapters button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      vid.currentTime = parseFloat(b.dataset.t);
+      var p = vid.play(); if (p && p.catch) p.catch(function () {});
+    });
+  });
+
+  /* freezer box: columns 1-6, rows A-F; example strains with illustrative dates */
+  var strains = {
+    A1: ["Saccharomyces cerevisiae", "Ale-01", "Freezer 1 / Box 1 / A1", "2026-09-14", "ok", "Due in 41 days"],
+    A2: ["Saccharomyces cerevisiae", "Ale-02", "Freezer 1 / Box 1 / A2", "2026-09-14", "ok", "Due in 41 days"],
+    A5: ["Saccharomyces pastorianus", "Lager-01", "Freezer 1 / Box 1 / A5", "2026-08-30", "ok", "Due in 26 days"],
+    B2: ["Lactobacillus brevis", "LB-04", "Freezer 1 / Box 1 / B2", "2026-10-01", "soon", "Due in 4 days"],
+    B3: ["Pediococcus damnosus", "PD-05", "Freezer 1 / Box 1 / B3", "2026-10-01", "ok", "Due in 19 days"],
+    B6: ["Brettanomyces bruxellensis", "Brett-01", "Freezer 1 / Box 1 / B6", "2026-05-01", "late", "Overdue by 23 days"],
+    C1: ["Acetobacter aceti", "AA-06", "Freezer 1 / Box 1 / C1", "2026-09-20", "ok", "Due in 31 days"],
+    C4: ["Saccharomyces cerevisiae", "Wheat-01", "Freezer 1 / Box 1 / C4", "2026-09-02", "ok", "Due in 28 days"],
+    D2: ["Bacillus subtilis", "ATCC 6633", "Freezer 1 / Box 1 / D2", "2026-07-03", "late", "Overdue by 23 days"],
+    D5: ["Lactobacillus plantarum", "LP-04", "Freezer 1 / Box 1 / D5", "2026-09-18", "ok", "Due in 36 days"],
+    E1: ["Saccharomyces cerevisiae", "Stout-01", "Freezer 1 / Box 1 / E1", "2026-09-25", "ok", "Due in 46 days"],
+    E3: ["Hanseniaspora uvarum", "HU-01", "Freezer 1 / Box 1 / E3", "2026-09-25", "soon", "Due in 3 days"],
+    F4: ["Pediococcus damnosus", "Spoil-02", "Freezer 1 / Box 1 / F4", "2026-10-01", "ok", "Due in 19 days"],
+    F6: ["Saccharomyces pastorianus", "Lager-02", "Freezer 1 / Box 1 / F6", "2026-08-12", "ok", "Due in 12 days"]
+  };
+  var rows = "ABCDEF", grid = document.getElementById("boxgrid"), tube = document.getElementById("tube");
+  var corner = document.createElement("span"); grid.appendChild(corner);
+  for (var c = 1; c <= 6; c++) { var h = document.createElement("span"); h.className = "ax"; h.textContent = c; grid.appendChild(h); }
+  var buttons = {};
+  rows.split("").forEach(function (r) {
+    var l = document.createElement("span"); l.className = "ax"; l.textContent = r; grid.appendChild(l);
+    for (var c = 1; c <= 6; c++) {
+      var id = r + c, s = strains[id], el;
+      if (s) {
+        el = document.createElement("button"); el.type = "button";
+        el.className = "vial " + s[4]; el.setAttribute("aria-pressed", "false");
+        el.setAttribute("aria-label", id + ": " + s[0] + " " + s[1] + ", " + s[5]);
+        el.innerHTML = '<span class="cap"></span>';
+        el.addEventListener("click", (function (k) { return function () { show(k); }; })(id));
+        el.addEventListener("mouseenter", (function (k) { return function () { show(k); }; })(id));
+        buttons[id] = el;
+      } else { el = document.createElement("span"); el.className = "vial empty"; }
+      grid.appendChild(el);
+    }
+  });
+  function show(id) {
+    var s = strains[id];
+    Object.keys(buttons).forEach(function (k) { buttons[k].setAttribute("aria-pressed", k === id ? "true" : "false"); });
+    var label = { ok: "Not due", soon: "Due soon", late: "Overdue" }[s[4]];
+    tube.innerHTML = '<div class="nm"></div><dl><dt>Strain</dt><dd class="d1"></dd><dt>Position</dt><dd class="d2"></dd><dt>Last revival</dt><dd class="d3"></dd><dt>Status</dt><dd><span class="badge ' + s[4] + '"></span></dd></dl>';
+    tube.querySelector(".nm").textContent = s[0];
+    tube.querySelector(".d1").textContent = s[1];
+    tube.querySelector(".d2").textContent = s[2];
+    tube.querySelector(".d3").textContent = s[3];
+    tube.querySelector(".badge").textContent = s[5];
+  }
+  show("B6");
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+# For a fixed set of versions instead, see requirements-tested.txt.
+flask>=2.3
+numpy>=1.24
+scipy>=1.10
+opencv-python-headless>=4.8
+Pillow>=10.0
+python-dotenv>=1.0
+openpyxl>=3.1
+segno>=1.6   # QR codes on printed labels (labels still print without it)
+
+
+# A production server. `python app.py` uses waitress when it is installed and
+# falls back to Flask's development server otherwise.
+waitress>=3.0
+# Linux servers can use gunicorn instead (run.sh and deploy/ use it when present).
+# gunicorn>=21.2

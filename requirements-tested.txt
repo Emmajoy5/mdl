@@ -1,0 +1,28 @@
+# The exact versions the library's test suites last passed with, on Python
+# 3.13.18. requirements.txt says "this version or newer", which is right for a
+# lab that wants current libraries; this file is for an install that has to come
+# up the same way every time: a validated system, a server you can't easily
+# repair, or reproducing the published results years from now.
+#
+#     pip install -r requirements-tested.txt
+#
+# Run the test suites after installing (README, "Checks"). To move to newer
+# libraries, install from requirements.txt in a copy, run the suites, and if
+# they pass write the new versions here with the date.
+#
+# Tested 26 November 2026, MDL 4.7.2.
+
+flask==3.1.3
+werkzeug==3.1.9          # Flask pulls these two in; pinned so an install can't drift
+Jinja2==3.1.6
+numpy==2.5.3
+scipy==1.18.1
+opencv-python-headless==5.0.0.93
+Pillow==12.3.0
+python-dotenv==1.2.3
+openpyxl==3.1.5
+# Not installed in the tested run, so no version is claimed for them. Pin
+# whichever the lab installs:
+# segno==x.y              # QR codes on printed labels (labels print without it)
+# waitress==x.y           # the production server app.py uses when installed
+# gunicorn==x.y           # used instead on Linux servers (run.sh, deploy/)

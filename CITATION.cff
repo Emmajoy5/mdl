@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below. Once the paper is published, cite the paper (preferred-citation will be updated)."
+type: software
+title: "Microbial Digital Library: an open, self-hosted system for managing microbial culture collections"
+version: 4.7.2
+date-released: 2026-11-26
+license: MIT
+authors:
+  - family-names: Fajoyegbe
+    given-names: Emmanuel
+    email: fajoyemma@gmail.com
+    affiliation: "Osun State University, Osogbo, Nigeria; Beavertown Brewery, London, United Kingdom"
+    orcid: "https://orcid.org/0000-0002-6089-0100"
+repository-code: "https://github.com/Emmajoy5/MDL"
+url: "https://emmajoy5.github.io/MDL/"
+abstract: >-
+  A free web application for keeping track of a laboratory culture collection. It
+  records where each strain is stored, prints QR labels, works out when strains
+  are due for revival, and keeps a dated history of revival checks, Gram stains
+  and plate photos. Strain lists can be imported from a spreadsheet, and plate
+  photos can be turned into 3D models. Each lab runs its own installation on its
+  own computer or server, so its data stays with the lab.
+keywords:
+  - culture collection
+  - strain curation
+  - laboratory information management
+  - brewing microbiology
+  - viability monitoring
+  - self-hosted software
+# identifiers:                 # added after the first Zenodo release
+#   - type: doi
+#     value: 10.5281/zenodo.XXXXXXX
+#     description: "Concept DOI (all versions)"

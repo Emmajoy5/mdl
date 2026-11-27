@@ -1,0 +1,18 @@
+# Your data and secrets: never upload these
+.env
+.secret_key
+*.db
+*.db-wal
+*.db-shm
+imports/
+backups/
+uploads/*
+!uploads/.gitkeep
+models/*
+!models/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/

@@ -1,0 +1,52 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    # Windows is included on purpose: a path-separator bug once shipped because
+    # the suite had only been run on Linux.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - name: Install
+        run: python -m pip install -r requirements.txt segno
+      - name: Main suite
+        run: python test_app.py
+      - name: Demo mode
+        run: python test_demo.py
+      - name: Forgotten passwords and reset links
+        run: python test_password_reset.py
+      - name: Plates and cells
+        run: python test_plates_and_cells.py
+      - name: Several people saving at the same moment
+        run: python test_concurrent.py
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t mdl:ci .
+      - name: Start and check the sign-in page
+        run: |
+          docker run -d --name mdl -p 8000:8000 -e ADMIN_USERNAME=labadmin -e ADMIN_PASSWORD=ci-lab-admin-pass-1 mdl:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/login >/dev/null; then echo "up"; break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:8000/login | grep -q "Microbial Digital Library"
+          docker logs mdl | tail -20

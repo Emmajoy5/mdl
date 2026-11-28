@@ -11,8 +11,8 @@ authors:
     email: fajoyemma@gmail.com
     affiliation: "Osun State University, Osogbo, Nigeria; Beavertown Brewery, London, United Kingdom"
     orcid: "https://orcid.org/0000-0002-6089-0100"
-repository-code: "https://github.com/Emmajoy5/MDL"
-url: "https://emmajoy5.github.io/MDL/"
+repository-code: "https://github.com/Emmajoy5/mdl"
+url: "https://emmajoy5.github.io/mdl/"
 abstract: >-
   A free web application for keeping track of a laboratory culture collection. It
   records where each strain is stored, prints QR labels, works out when strains

@@ -15,12 +15,12 @@ disk), which suits the demo mode: it rebuilds its own data at every start.
    | `PORT` | `7860` |
    | `APP_DATA_DIR` | `/tmp/mdl` |
    | `MDL_DEMO_RESET_HOURS` | `6` |
-   | `MDL_SOURCE_URL` | `https://github.com/Emmajoy5/MDL` (or your own copy) |
+   | `MDL_SOURCE_URL` | `https://github.com/Emmajoy5/mdl` (or your own copy) |
 
 4. Push the code to the Space (it is a git repository):
    ```bash
    git clone https://huggingface.co/spaces/<you>/<space-name> space
-   git clone https://github.com/Emmajoy5/MDL
+   git clone https://github.com/Emmajoy5/mdl
    cp -r MDL/* MDL/.dockerignore space/
    cp mdl/deploy/huggingface/SPACE_README.md space/README.md   # the Space needs this header
    cd space && git add -A && git commit -m "MDL demo" && git push

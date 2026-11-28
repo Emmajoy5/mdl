@@ -12,7 +12,7 @@ Prepared for the public release and the archived deposit, 26 November 2026.
   with the feature present but switched off, so what the testers used behaved
   exactly as this release does.
 
-## Isolates are no longer lost when people save at the same moment
+### Isolates are no longer lost when people save at the same moment
 
 A lab runs one installation for everybody, so two people pressing Save in the
 same second is normal. These fixes went in on 23 November 2026.
@@ -40,7 +40,7 @@ same second is normal. These fixes went in on 23 November 2026.
 - `test_concurrent.py`, which runs six clients at the same moment and holds the
   database open under a save to check it waits.
 
-## Earlier unreleased: changes from the first pilot feedback
+### Earlier unreleased: changes from the first pilot feedback
 
 Made after the first round of feedback from the pilot in our own lab
 (6 responses, 11 to 12 November 2026). The version number is unchanged until
@@ -239,9 +239,9 @@ run more than once and never touch a lab's real database.
   like spreadsheet formulas are made safe before export.
 - The count of print-ready strains was too high (one strain showed 8 instead of 2).
 - `build_catalog.py` no longer adds example data to a live database.
-- `python app.py` uses waitress when it is installed. `MDL_SSL_CERT` and
-  `MDL_SSL_KEY` turn on HTTPS, which phones need to install the app, and
-  `MDL_HOST` and `MDL_PORT` set the address. The README explains HTTPS on a lab
+- `python app.py` uses waitress when it is installed. `mdl_SSL_CERT` and
+  `mdl_SSL_KEY` turn on HTTPS, which phones need to install the app, and
+  `mdl_HOST` and `mdl_PORT` set the address. The README explains HTTPS on a lab
   network.
 
 ### Repository, citation and demo
@@ -251,14 +251,14 @@ run more than once and never touch a lab's real database.
   built and started on every change.
 - Added issue and pull request templates, a contributing guide and a code of
   conduct.
-- A public demo mode (`MDL_DEMO=1`) sets up one demo lab with example strains,
+- A public demo mode (`mdl_DEMO=1`) sets up one demo lab with example strains,
   real plate photos and 3D models, behind a shared account. Account and user
   settings are switched off and everything is reset every few hours.
   `deploy/huggingface/` explains how to host it for free.
 
 ### Example strains
 - *Lactobacillus brevis* is now *Levilactobacillus brevis* (Zheng et al., 2020),
-  ID MDL-LEVBRE-004.
+  ID mdl-LEVBRE-004.
 - *Acetobacter* is now revived every 60 days, since acetic acid bacteria lose
   viability in storage.
 
@@ -895,7 +895,7 @@ activation codes for new labs.)
 
 **Rebrand**
 - Renamed the app from "Microbial 3D Collection" to "Microbial Digital Library"
-  and switched the collection-ID prefix from `MC3D-` to `MDL-`.
+  and switched the collection-ID prefix from `MC3D-` to `mdl-`.
 - New logo and a proper landing page (hero + feature tiles) separate from the
   dense browse/search catalog, which now lives at `/catalog`.
 

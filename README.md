@@ -1,11 +1,11 @@
 # Microbial Digital Library: a self-hosted lab web app
 
-[![tests](https://github.com/Emmajoy5/MDL/actions/workflows/tests.yml/badge.svg)](https://github.com/Emmajoy5/MDL/actions/workflows/tests.yml)
+[![tests](https://github.com/Emmajoy5/mdl/actions/workflows/tests.yml/badge.svg)](https://github.com/Emmajoy5/mdl/actions/workflows/tests.yml)
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 <!-- After the first Zenodo release, add:
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX) -->
 
-Version 4.7.2 · [Project page](https://emmajoy5.github.io/MDL/) ·
+Version 4.7.2 · [Project page](https://emmajoy5.github.io/mdl/) ·
 [Changelog](CHANGELOG.md) · [How to cite](#how-to-cite) · [Try the demo](#public-demo)
 
 A browser-based tool for your lab to catalogue strains (both the freezer

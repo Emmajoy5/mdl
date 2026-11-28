@@ -143,7 +143,7 @@ def install(app_module):
     flask_app.jinja_env.globals["demo_credentials"] = (DEMO_USERNAME, DEMO_PASSWORD)
     flask_app.jinja_env.globals["demo_reset_hours"] = reset_hours()
     flask_app.jinja_env.globals["demo_source_url"] = os.environ.get(
-        "MDL_SOURCE_URL", "https://github.com/Emmajoy5/MDL")
+        "MDL_SOURCE_URL", "https://github.com/Emmajoy5/mdl")
 
     @flask_app.before_request
     def _demo_guard():

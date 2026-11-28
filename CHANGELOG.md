@@ -40,7 +40,7 @@ same second is normal. These fixes went in on 23 November 2026.
 - `test_concurrent.py`, which runs six clients at the same moment and holds the
   database open under a save to check it waits.
 
-### Earlier unreleased: changes from the first pilot feedback
+### Changes from the first pilot feedback
 
 Made after the first round of feedback from the pilot in our own lab
 (6 responses, 11 to 12 November 2026). The version number is unchanged until

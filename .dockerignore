@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+.secret_key
+microbe_catalog.db*
+uploads/*
+models/*
+backups/
+.git/
+# test_fixtures/ is kept: the public demo (MDL_DEMO=1) uses three of its photos
